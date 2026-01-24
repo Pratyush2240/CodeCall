@@ -1,12 +1,13 @@
 {
   "name": "codecall-backend",
   "version": "1.0.0",
- "type": "module",
-"scripts": {
-  "dev": "nodemon src/server.js",
-  "start": "node src/server.js"
-},
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js"
+  },
   "dependencies": {
+    "@prisma/client": "^5.22.0",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
@@ -16,7 +17,8 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "dotenv-cli": "^11.0.0",
     "nodemon": "^3.1.11",
-    "prisma": "^7.2.0"
+    "prisma": "^5.22.0"
   }
 }
