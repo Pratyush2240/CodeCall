@@ -15,3 +15,34 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
+
+model Friend {
+  id          String        @id @default(uuid())
+  requesterId String
+  receiverId  String
+  status      FriendStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+
+  @@unique([requesterId, receiverId])
+}
+
+enum FriendStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
+model Session {
+  id        String        @id @default(uuid())
+  hostId    String
+  guestId  String?
+  status    SessionStatus @default(WAITING)
+  createdAt DateTime      @default(now())
+  endedAt   DateTime?
+}
+
+enum SessionStatus {
+  WAITING
+  ACTIVE
+  ENDED
+}
