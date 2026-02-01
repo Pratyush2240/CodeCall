@@ -1,64 +1,135 @@
-# CodeCall – Backend (Phase 1)
+# CodeCall – Backend
 
-Backend service for **CodeCall**, a collaborative platform that enables friends to practice technical interviews together through structured practice sessions.
+Backend service for **CodeCall**, a real-time collaborative platform that enables friends to practice technical interviews together with live coding, whiteboard collaboration, and audio/video communication.
 
-This repository contains **Phase 1** of the backend, focused on building a robust foundation with authentication, friend management, and practice session lifecycle management.
+This repository currently implements **Phase 1 (Backend Foundations)** and **Phase 2 (Realtime Collaboration)**.
 
 ---
 
-## 📌 Phase 1 Scope
+## 📌 Project Overview
 
-Phase 1 focuses strictly on core backend foundations:
+CodeCall is designed as a **session-based collaborative interview platform** where users can:
 
-- Secure authentication
-- User relationship management (friends)
+- Authenticate securely
+- Connect with friends
+- Create and join practice sessions
+- Collaborate in real time using:
+  - Live code editor
+  - Shared whiteboard
+  - Audio/video (WebRTC signaling)
+- Execute code securely on the backend
+
+The backend follows a **clean separation of concerns** between REST APIs, realtime communication, and execution logic.
+
+---
+
+## 🧩 Phase Breakdown
+
+### ✅ Phase 1 — Backend Foundations
+Focus: **Core backend architecture and correctness**
+
+- JWT-based authentication
+- User & friend management
 - Practice session lifecycle
-- Clean architecture with proper separation of concerns
-- Database schema design and migrations
-
-No realtime, code editor, or media features are included in this phase.
+- Database schema & migrations
+- Clean REST API design
 
 ---
 
-## 🚀 Features (Implemented)
+### ✅ Phase 2 — Realtime Collaboration
+Focus: **Live, multi-user collaboration**
+
+- Socket.IO based realtime layer
+- Session-scoped presence
+- Live collaborative code editing
+- Secure backend code execution
+- Shared whiteboard sync
+- WebRTC signaling for audio/video
+
+---
+
+## 🚀 Features Implemented
 
 ### 🔐 Authentication
-- User registration and login
-- Password hashing using bcrypt
-- JWT-based authentication
-- Protected routes via authentication middleware
-- Secure token-based user identification
+- User registration & login
+- Password hashing with `bcrypt`
+- JWT access tokens
+- Protected REST routes
+- JWT-authenticated socket connections
+
+---
 
 ### 👥 Friend System
-- Send friend requests
-- Accept friend requests
-- Prevent invalid operations (self requests, duplicates)
+- Send & accept friend requests
+- Prevent duplicate or invalid requests
 - List accepted friends
 - Authorization enforced at every step
+
+---
 
 ### 🧩 Practice Sessions
 - Create a practice session (host)
 - Join a session (guest)
-- Role-based enforcement:
+- Role-based rules:
   - Host cannot join as guest
-  - Only host can end the session
+  - Only host can end a session
 - Session lifecycle states:
-  - WAITING
-  - ACTIVE
-  - ENDED
-- Clean validation and error handling
+  - `WAITING`
+  - `ACTIVE`
+  - `ENDED`
+
+---
+
+### ⚡ Realtime Presence (Socket.IO)
+- JWT-secured socket connections
+- Session-based rooms
+- User join/leave signaling
+- REST + realtime separation
+
+---
+
+### 💻 Live Code Collaboration
+- Realtime code sync across session participants
+- Session-scoped broadcasting
+- Late-join synchronization support
+
+---
+
+### 🧪 Code Execution Sandbox
+- Secure JavaScript execution on backend
+- Timeouts to prevent infinite loops
+- Output capture (stdout / stderr)
+- Stateless execution
+- Auth-protected execution endpoint
+
+---
+
+### 🖊️ Whiteboard Sync
+- Realtime drawing stroke synchronization
+- Clear-board events
+- Session-isolated whiteboards
+
+---
+
+### 🎥 WebRTC Signaling
+- SDP offer / answer relay
+- ICE candidate relay
+- Peer leave signaling
+- Backend acts as signaling server only (no media handling)
 
 ---
 
 ## 🛠 Tech Stack
 
-- Node.js
-- Express.js
-- PostgreSQL
-- Prisma ORM
-- JWT (jsonwebtoken)
-- bcrypt
-- Nodemon
+- **Node.js**
+- **Express.js**
+- **PostgreSQL**
+- **Prisma ORM**
+- **Socket.IO**
+- **JWT (jsonwebtoken)**
+- **bcrypt**
+- **WebRTC (signaling only)**
+- **Nodemon**
 
 ---
 
@@ -71,14 +142,19 @@ backend/
 │   ├── schema.prisma
 │   └── migrations/
 ├── src/
-│   ├── config/        # Prisma & app configuration
-│   ├── controllers/  # HTTP request handlers
-│   ├── services/     # Business logic
-│   ├── routes/       # API routes
-│   ├── middlewares/  # Auth & error handling
-│   ├── utils/        # Helpers (JWT, responses)
-│   ├── app.js        # Express app setup
-│   └── server.js     # Server bootstrap
+│   ├── config/          # Environment & Prisma config
+│   ├── controllers/     # REST controllers
+│   ├── services/        # Business logic
+│   ├── routes/          # REST routes
+│   ├── middlewares/     # Auth & error handling
+│   ├── sockets/         # Realtime (Socket.IO)
+│   │   ├── index.js
+│   │   ├── code.socket.js
+│   │   ├── whiteboard.socket.js
+│   │   └── webrtc.socket.js
+│   ├── utils/           # Helpers & response utils
+│   ├── app.js           # Express app
+│   └── server.js        # HTTP + Socket.IO bootstrap
 ├── .env.example
 ├── .gitignore
 └── package.json
@@ -98,37 +174,35 @@ JWT_ACCESS_SECRET=your_access_secret
 JWT_REFRESH_SECRET=your_refresh_secret
 ````
 
-> `.env` is excluded from version control.
-
 ---
 
-## 🧪 Running the Backend Locally
+## 🧪 Running Locally
 
-### Install dependencies
+### 1️⃣ Install dependencies
 
 ```bash
 npm install
 ```
 
-### Run database migrations
+### 2️⃣ Run database migrations
 
 ```bash
 npx prisma migrate dev
 ```
 
-### Generate Prisma client
+### 3️⃣ Generate Prisma client
 
 ```bash
 npx prisma generate
 ```
 
-### Start the development server
+### 4️⃣ Start development server
 
 ```bash
 npm run dev
 ```
 
-Server runs on:
+Server runs at:
 
 ```
 http://localhost:5000
@@ -136,56 +210,75 @@ http://localhost:5000
 
 ---
 
-## 🔍 API Endpoints (Phase 1)
+## 🔍 API Endpoints (Key)
 
 ### Authentication
 
-* POST `/auth/register`
-* POST `/auth/login`
+* `POST /auth/register`
+* `POST /auth/login`
 
 ### Friends
 
-* POST `/friends/request`
-* POST `/friends/accept/:id`
-* GET `/friends`
+* `POST /friends/request`
+* `POST /friends/accept/:id`
+* `GET /friends`
 
 ### Practice Sessions
 
-* POST `/sessions` — create session (host)
-* POST `/sessions/join/:id` — join session (guest)
-* POST `/sessions/end/:id` — end session (host only)
+* `POST /sessions`
+* `POST /sessions/join/:id`
+* `POST /sessions/end/:id`
 
-All protected routes require:
+### Code Execution
+
+* `POST /execute/run` (JWT protected)
+
+---
+
+## 🔐 Authentication Note
+
+All protected routes and realtime socket connections require:
 
 ```
-Authorization: Bearer <JWT_TOKEN>
+Authorization: Bearer <JWT_ACCESS_TOKEN>
 ```
 
 ---
 
-## ✅ Phase 1 Status
+## 🧠 Architecture Highlights
 
-* Authentication implemented
-* Friend system implemented
-* Practice session lifecycle implemented
-* Database schema & migrations stable
-* Clean backend architecture
+* Clear separation between:
 
-**Phase 1 is complete and stable.**
+  * REST APIs
+  * Realtime Socket.IO layer
+  * Execution sandbox
+* Session IDs created via REST, reused across realtime features
+* Backend acts only as:
+
+  * API provider
+  * Signaling server
+  * Execution sandbox
+* No media processing or rendering on backend
 
 ---
 
-## 👤 Author
+## 🔜 Roadmap (Phase 3+)
 
-Pratyush Kumar
+* Frontend integration (React + Monaco + Canvas)
+* Persistent session artifacts
+* AI-powered post-session feedback
+* Production hardening (Docker, Redis, TURN servers)
+* Scaling WebSocket infrastructure
 
 ---
 
-## 📜 License
+## 📄 License
 
 MIT License
 
-````
+```
 
 ---
 
+
+```
