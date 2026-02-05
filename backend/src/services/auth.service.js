@@ -7,33 +7,71 @@ import {
 
 const SALT_ROUNDS = 10;
 
+/**
+ * Register a new user
+ */
 export const registerUser = async ({ name, email, password }) => {
-  const existingUser = await prisma.user.findUnique({ where: { email } });
-  if (existingUser) {
-    throw { statusCode: 409, message: "Email already registered" };
-  }
-
-  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-
-  const user = await prisma.user.create({
-    data: { name, email, passwordHash }
+  // 1. Check if user already exists
+  const existingUser = await prisma.user.findUnique({
+    where: { email }
   });
 
-  return user;
+  if (existingUser) {
+    throw {
+      statusCode: 409,
+      message: "Email already registered"
+    };
+  }
+
+  // 2. Hash password
+  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+
+  // 3. Create user
+  const user = await prisma.user.create({
+    data: {
+      name,
+      email,
+      passwordHash
+    }
+  });
+
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email
+  };
 };
 
+/**
+ * Login user
+ */
 export const loginUser = async ({ email, password }) => {
-  const user = await prisma.user.findUnique({ where: { email } });
+  // 1. Find user
+  const user = await prisma.user.findUnique({
+    where: { email }
+  });
+
   if (!user) {
-    throw { statusCode: 401, message: "Invalid credentials" };
+    throw {
+      statusCode: 401,
+      message: "Invalid credentials"
+    };
   }
 
+  // 2. Verify password
   const isMatch = await bcrypt.compare(password, user.passwordHash);
   if (!isMatch) {
-    throw { statusCode: 401, message: "Invalid credentials" };
+    throw {
+      statusCode: 401,
+      message: "Invalid credentials"
+    };
   }
 
-  const payload = { userId: user.id };
+  // 3. Generate tokens
+  const payload = {
+    userId: user.id,
+    email: user.email
+  };
 
   return {
     accessToken: generateAccessToken(payload),
