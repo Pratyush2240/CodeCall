@@ -1,12 +1,8 @@
-import prisma from "../../config/prisma.js";
-import {
-  generateAccessToken,
-  generateRefreshToken,
-  verifyRefreshToken
-} from "../../utils/jwt.js";
 import {
   registerUser,
-  loginUser
+  loginUser,
+  refreshUserToken,
+  logoutUser
 } from "./auth.service.js";
 
 /**
@@ -22,16 +18,13 @@ export const register = async (req, res, next) => {
     res.status(201).json({
       success: true,
       message: "User registered successfully",
-      data: {
-        id: user.id,
-        username: user.username,
-        email: user.email
-      }
+      data: user
     });
   } catch (error) {
     next(error);
   }
 };
+
 
 /**
  * LOGIN
@@ -56,44 +49,26 @@ export const login = async (req, res, next) => {
   }
 };
 
+
 /**
- * REFRESH ACCESS TOKEN
+ * REFRESH TOKEN (ROTATION ENABLED)
  * POST /api/auth/refresh
  */
 export const refresh = async (req, res, next) => {
   try {
     const { refreshToken } = req.body;
 
-    if (!refreshToken) {
-      return res.status(401).json({
-        message: "Refresh token missing"
-      });
-    }
-
-    const payload = verifyRefreshToken(refreshToken);
-
-    const user = await prisma.user.findUnique({
-      where: { id: payload.userId }
-    });
-
-    if (!user || user.refreshToken !== refreshToken) {
-      return res.status(403).json({
-        message: "Invalid refresh token"
-      });
-    }
-
-    const newAccessToken = generateAccessToken({
-      userId: user.id,
-      role: user.role
-    });
+    const tokens = await refreshUserToken(refreshToken);
 
     res.status(200).json({
-      accessToken: newAccessToken
+      success: true,
+      ...tokens
     });
   } catch (error) {
     next(error);
   }
 };
+
 
 /**
  * LOGOUT
@@ -101,17 +76,13 @@ export const refresh = async (req, res, next) => {
  */
 export const logout = async (req, res, next) => {
   try {
-    const { refreshToken } = req.body;
+    const userId = req.user?.id; // requires requireAuth middleware
 
-    if (refreshToken) {
-      await prisma.user.updateMany({
-        where: { refreshToken },
-        data: { refreshToken: null }
-      });
-    }
+    const result = await logoutUser(userId);
 
     res.status(200).json({
-      message: "Logged out successfully"
+      success: true,
+      ...result
     });
   } catch (error) {
     next(error);
