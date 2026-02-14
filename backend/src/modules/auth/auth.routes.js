@@ -14,8 +14,7 @@ const router = Router();
  */
 router.post("/register", register);
 router.post("/login", login);
-router.post("/refresh", refresh); // uses refresh token from body
-
+router.post("/refresh", refresh);
 
 /**
  * Protected Routes

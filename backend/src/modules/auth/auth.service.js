@@ -83,10 +83,10 @@ export const refreshUserToken = async (refreshToken) => {
     throw { statusCode: 401, message: "Refresh token missing" };
   }
 
-  // 1️⃣ Verify refresh token signature
+  // 1. Verify refresh token signature
   const payload = verifyRefreshToken(refreshToken);
 
-  // 2️⃣ Fetch user
+  // 2. Fetch user
   const user = await prisma.user.findUnique({
     where: { id: payload.userId }
   });
@@ -95,12 +95,12 @@ export const refreshUserToken = async (refreshToken) => {
     throw { statusCode: 403, message: "Invalid refresh token" };
   }
 
-  // 3️⃣ Match refresh token stored in DB
+  // 3. Match refresh token stored in DB
   if (user.refreshToken !== refreshToken) {
     throw { statusCode: 403, message: "Refresh token mismatch" };
   }
 
-  // 4️⃣ Generate new tokens (ROTATION)
+  // 4. Generate new tokens (ROTATION)
   const newAccessToken = generateAccessToken({
     userId: user.id,
     role: user.role
@@ -110,7 +110,7 @@ export const refreshUserToken = async (refreshToken) => {
     userId: user.id
   });
 
-  // 5️⃣ Replace refresh token in DB
+  // 5. Replace refresh token in DB
   await prisma.user.update({
     where: { id: user.id },
     data: { refreshToken: newRefreshToken }

@@ -25,7 +25,6 @@ export const register = async (req, res, next) => {
   }
 };
 
-
 /**
  * LOGIN
  * POST /api/auth/login
@@ -49,7 +48,6 @@ export const login = async (req, res, next) => {
   }
 };
 
-
 /**
  * REFRESH TOKEN (ROTATION ENABLED)
  * POST /api/auth/refresh
@@ -69,9 +67,8 @@ export const refresh = async (req, res, next) => {
   }
 };
 
-
 /**
- * LOGOUT
+ * LOGOUT (Protected)
  * POST /api/auth/logout
  */
 export const logout = async (req, res, next) => {
