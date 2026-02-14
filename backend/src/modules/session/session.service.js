@@ -1,13 +1,21 @@
-import { prisma } from "../config/prisma.js";
+import prisma from "../../config/prisma.js";
 
+/**
+ * Create Session
+ */
 export const createSession = async (hostId) => {
   return prisma.session.create({
     data: { hostId }
   });
 };
 
+/**
+ * Join Session
+ */
 export const joinSession = async (sessionId, userId) => {
-  const session = await prisma.session.findUnique({ where: { id: sessionId } });
+  const session = await prisma.session.findUnique({
+    where: { id: sessionId }
+  });
 
   if (!session) {
     throw { statusCode: 404, message: "Session not found" };
@@ -30,8 +38,13 @@ export const joinSession = async (sessionId, userId) => {
   });
 };
 
+/**
+ * End Session
+ */
 export const endSession = async (sessionId, userId) => {
-  const session = await prisma.session.findUnique({ where: { id: sessionId } });
+  const session = await prisma.session.findUnique({
+    where: { id: sessionId }
+  });
 
   if (!session || session.hostId !== userId) {
     throw { statusCode: 403, message: "Only host can end session" };
