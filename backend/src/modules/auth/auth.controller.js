@@ -5,83 +5,62 @@ import {
   logoutUser
 } from "./auth.service.js";
 
+import catchAsync from "../../utils/catchAsync.js";
+
 /**
  * REGISTER
- * POST /api/auth/register
  */
-export const register = async (req, res, next) => {
-  try {
-    const { username, email, password } = req.body;
+export const register = catchAsync(async (req, res) => {
+  const result = await registerUser(req.body);
 
-    const user = await registerUser({ username, email, password });
-
-    res.status(201).json({
-      success: true,
-      message: "User registered successfully",
-      data: user
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+  res.status(201).json({
+    status: "success",
+    data: result,
+  });
+});
 
 /**
  * LOGIN
- * POST /api/auth/login
  */
-export const login = async (req, res, next) => {
-  try {
-    const { email, password } = req.body;
+export const login = catchAsync(async (req, res) => {
+  const { email, password } = req.body;
 
-    const { accessToken, refreshToken } = await loginUser({
-      email,
-      password
-    });
+  const { accessToken, refreshToken } = await loginUser({
+    email,
+    password,
+  });
 
-    res.status(200).json({
-      success: true,
-      accessToken,
-      refreshToken
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+  res.status(200).json({
+    status: "success",
+    accessToken,
+    refreshToken,
+  });
+});
 
 /**
- * REFRESH TOKEN (ROTATION ENABLED)
- * POST /api/auth/refresh
+ * REFRESH
  */
-export const refresh = async (req, res, next) => {
-  try {
-    const { refreshToken } = req.body;
+export const refresh = catchAsync(async (req, res) => {
+  const { refreshToken } = req.body;
 
-    const tokens = await refreshUserToken(refreshToken);
+  const tokens = await refreshUserToken(refreshToken);
 
-    res.status(200).json({
-      success: true,
-      ...tokens
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+  res.status(200).json({
+    status: "success",
+    ...tokens,
+  });
+});
 
 /**
- * LOGOUT (Protected)
- * POST /api/auth/logout
+ * LOGOUT
  */
-export const logout = async (req, res, next) => {
-  try {
-    const userId = req.user?.id; // requires requireAuth middleware
+export const logout = catchAsync(async (req, res) => {
+  const userId = req.user?.id;
 
-    const result = await logoutUser(userId);
+  const result = await logoutUser(userId);
 
-    res.status(200).json({
-      success: true,
-      ...result
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+  res.status(200).json({
+    status: "success",
+    ...result,
+  });
+});
