@@ -5,6 +5,7 @@ import {
   generateRefreshToken,
   verifyRefreshToken
 } from "../../utils/jwt.js";
+import AppError from "../../utils/appError.js";
 
 /**
  * Register User
@@ -17,7 +18,7 @@ export const registerUser = async ({ username, email, password }) => {
   });
 
   if (existingUser) {
-    throw { statusCode: 409, message: "User already exists" };
+    throw new AppError("User already exists", 400);
   }
 
   const hashedPassword = await hashPassword(password);
@@ -38,7 +39,6 @@ export const registerUser = async ({ username, email, password }) => {
   };
 };
 
-
 /**
  * Login User
  */
@@ -48,12 +48,13 @@ export const loginUser = async ({ email, password }) => {
   });
 
   if (!user) {
-    throw { statusCode: 401, message: "Invalid credentials" };
+    throw new AppError("Invalid credentials", 401);
   }
 
   const isValid = await comparePassword(password, user.password);
+
   if (!isValid) {
-    throw { statusCode: 401, message: "Invalid credentials" };
+    throw new AppError("Invalid credentials", 401);
   }
 
   const accessToken = generateAccessToken({
@@ -74,13 +75,12 @@ export const loginUser = async ({ email, password }) => {
   return { accessToken, refreshToken };
 };
 
-
 /**
  * Refresh Token (WITH ROTATION)
  */
 export const refreshUserToken = async (refreshToken) => {
   if (!refreshToken) {
-    throw { statusCode: 401, message: "Refresh token missing" };
+    throw new AppError("Refresh token missing", 401);
   }
 
   // 1. Verify refresh token signature
@@ -92,12 +92,12 @@ export const refreshUserToken = async (refreshToken) => {
   });
 
   if (!user) {
-    throw { statusCode: 403, message: "Invalid refresh token" };
+    throw new AppError("Invalid refresh token", 403);
   }
 
   // 3. Match refresh token stored in DB
   if (user.refreshToken !== refreshToken) {
-    throw { statusCode: 403, message: "Refresh token mismatch" };
+    throw new AppError("Refresh token mismatch", 403);
   }
 
   // 4. Generate new tokens (ROTATION)
@@ -121,7 +121,6 @@ export const refreshUserToken = async (refreshToken) => {
     refreshToken: newRefreshToken
   };
 };
-
 
 /**
  * Logout (Invalidate Refresh Token)
