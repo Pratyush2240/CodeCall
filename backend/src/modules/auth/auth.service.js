@@ -5,6 +5,7 @@ import {
   generateRefreshToken,
   verifyRefreshToken
 } from "../../utils/jwt.js";
+import AppError from "../../utils/appError.js";
 
 /**
  * Register User
@@ -17,8 +18,9 @@ export const registerUser = async ({ username, email, password }) => {
   });
 
   if (existingUser) {
-    throw { statusCode: 409, message: "User already exists" };
-  }
+  throw new AppError("User already exists", 400);
+}
+
 
   const hashedPassword = await hashPassword(password);
 
@@ -47,9 +49,10 @@ export const loginUser = async ({ email, password }) => {
     where: { email }
   });
 
-  if (!user) {
-    throw { statusCode: 401, message: "Invalid credentials" };
-  }
+if (!user) {
+  throw new AppError("User not found", 404);
+}
+
 
   const isValid = await comparePassword(password, user.password);
   if (!isValid) {
