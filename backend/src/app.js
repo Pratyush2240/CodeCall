@@ -7,6 +7,7 @@ import friendRoutes from "./modules/friend/friend.routes.js";
 import sessionRoutes from "./modules/session/session.routes.js";
 
 import errorHandler from "./middlewares/error.middleware.js";
+import requestLogger from "./middlewares/requestLogger.middleware.js";
 import AppError from "./utils/appError.js";
 
 const app = express();
@@ -16,7 +17,7 @@ const app = express();
 // ======================
 app.use(cors());
 app.use(express.json());
-
+app.use(requestLogger);
 // ======================
 // Routes
 // ======================
