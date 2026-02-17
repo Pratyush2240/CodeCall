@@ -15,6 +15,7 @@
     "jsonwebtoken": "^9.0.3",
     "socket.io": "^4.8.3",
     "uuid": "^9.0.1",
+    "winston": "^3.19.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
