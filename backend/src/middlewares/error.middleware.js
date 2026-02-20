@@ -1,6 +1,8 @@
 import logger from "../utils/logger.js";
 
-const sendErrorDev = (err, res) => {
+const sendErrorDev = (err, req, res) => {
+  logger.warn(`${req.method} ${req.originalUrl} - ${err.message}`);
+
   res.status(err.statusCode).json({
     status: err.status,
     message: err.message,
@@ -8,16 +10,16 @@ const sendErrorDev = (err, res) => {
   });
 };
 
-const sendErrorProd = (err, res) => {
-  // Operational, trusted error
+const sendErrorProd = (err, req, res) => {
   if (err.isOperational) {
+    logger.warn(`${req.method} ${req.originalUrl} - ${err.message}`);
+
     return res.status(err.statusCode).json({
       status: err.status,
       message: err.message,
     });
   }
 
-  // Programming or unknown error
   logger.error(err);
 
   return res.status(500).json({
@@ -31,12 +33,10 @@ const errorHandler = (err, req, res, next) => {
   err.status = err.status || "error";
 
   if (process.env.NODE_ENV === "production") {
-    sendErrorProd(err, res);
+    sendErrorProd(err, req, res);
   } else {
-    sendErrorDev(err, res);
+    sendErrorDev(err, req, res);
   }
 };
-console.log("NODE_ENV:", process.env.NODE_ENV);
-
 
 export default errorHandler;
