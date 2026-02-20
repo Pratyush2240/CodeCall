@@ -1,28 +1,31 @@
 import { verifyAccessToken } from "../utils/jwt.js";
 import prisma from "../config/prisma.js";
+import AppError from "../utils/appError.js";
 
 export const requireAuth = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({
-        message: "Authorization token missing"
-      });
+      return next(new AppError("Authorization token missing", 401));
     }
 
     const token = authHeader.split(" ")[1];
 
-    const payload = verifyAccessToken(token);
+    let payload;
+
+    try {
+      payload = verifyAccessToken(token);
+    } catch (err) {
+      return next(new AppError("Invalid or expired token", 401));
+    }
 
     const user = await prisma.user.findUnique({
       where: { id: payload.userId }
     });
 
     if (!user) {
-      return res.status(401).json({
-        message: "User not found"
-      });
+      return next(new AppError("User no longer exists", 401));
     }
 
     req.user = {
@@ -31,9 +34,8 @@ export const requireAuth = async (req, res, next) => {
     };
 
     next();
+
   } catch (error) {
-    return res.status(401).json({
-      message: "Invalid or expired token"
-    });
+    next(error); // let global error handler decide
   }
 };
