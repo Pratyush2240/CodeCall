@@ -3,10 +3,11 @@ import logger from "../utils/logger.js";
 const sendErrorDev = (err, req, res) => {
   logger.warn(`${req.method} ${req.originalUrl} - ${err.message}`);
 
-  res.status(err.statusCode).json({
-    status: err.status,
-    message: err.message,
-    stack: err.stack,
+res.status(err.statusCode).json({
+  status: err.status,
+  code: err.code || "INTERNAL_SERVER_ERROR",
+  message: err.message,
+  stack: err.stack,
   });
 };
 
@@ -14,8 +15,9 @@ const sendErrorProd = (err, req, res) => {
   if (err.isOperational) {
     logger.warn(`${req.method} ${req.originalUrl} - ${err.message}`);
 
-    return res.status(err.statusCode).json({
+    res.status(err.statusCode).json({
       status: err.status,
+      code: err.code || "INTERNAL_SERVER_ERROR",
       message: err.message,
     });
   }

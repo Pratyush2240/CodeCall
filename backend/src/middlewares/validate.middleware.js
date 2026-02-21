@@ -1,5 +1,6 @@
 import { ZodError } from "zod";
 import AppError from "../utils/appError.js";
+import { ERROR_CODES } from "../constants/errorCodes.js";
 
 const validate = (schema) => (req, res, next) => {
   try {
@@ -10,12 +11,24 @@ const validate = (schema) => (req, res, next) => {
     });
 
     next();
+
   } catch (err) {
     if (err instanceof ZodError) {
-      const message = err.issues.map(issue => issue.message).join(", ");
-      return next(new AppError(message, 400));
+      // Collect readable validation messages
+      const message = err.issues
+        .map((issue) => issue.message)
+        .join(", ");
+
+      return next(
+        new AppError(
+          message,
+          400,
+          ERROR_CODES.VALIDATION_ERROR
+        )
+      );
     }
 
+    // Unknown error → bubble to global handler
     next(err);
   }
 };
