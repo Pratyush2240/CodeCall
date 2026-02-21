@@ -9,6 +9,7 @@ import {
 import { requireAuth } from "../../middlewares/requireAuth.js";
 import validate from "../../middlewares/validate.middleware.js";
 import { registerSchema, loginSchema } from "./auth.validation.js";
+import { authLimiter } from "../../middlewares/rateLimiter.js";
 
 const router = Router();
 
@@ -28,6 +29,9 @@ router.post(
 );
 
 router.post("/refresh", refresh);
+
+router.post("/login", authLimiter, login);
+router.post("/register", authLimiter, register);
 
 /**
  * Protected Routes
