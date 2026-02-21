@@ -1,286 +1,281 @@
+Excellent. This is the correct time to update documentation — after a stable tagged release (`v1.4.0`).
+
+Below is a **production-grade README update** covering everything up to Phase 5.6.
+You can paste this directly into your `README.md`.
+
+---
+
 # CodeCall – Backend
 
-CodeCall is a real-time collaborative interview practice platform that enables friends to practice technical interviews together with **secure authentication**, **live coding**, **shared sessions**, and **AI-powered feedback** (upcoming).
+CodeCall is a real-time collaborative interview practice platform that enables friends to practice technical interviews together with secure authentication, shared sessions, and AI-powered feedback (upcoming).
 
 This repository contains the **backend service**, built with a clean, scalable, production-ready architecture.
 
 ---
 
-## 🚀 Tech Stack
+# 🚀 Current Release
 
-- **Node.js** (ES Modules)
-- **Express.js**
-- **Prisma ORM**
-- **PostgreSQL**
-- **JWT (Access & Refresh Tokens)**
-- **bcrypt**
-- **Nodemon**
-- **Socket.IO** (planned – Phase 4)
+**Latest Version:** `v1.4.0`
+**Phase:** 5.6 – Structured Error Code System
+**Status:** Production-ready backend foundation
 
 ---
 
-## 📂 Project Structure
+# 🏗 Architecture Overview
 
-```text
-backend/
-├── prisma/
-│   ├── schema.prisma
-│   └── migrations/
-│
-├── src/
-│   ├── config/
-│   │   ├── prisma.js
-│   │   └── env.js
-│   │
-│   ├── controllers/
-│   │   └── auth.controller.js
-│   │
-│   ├── services/
-│   │   └── auth.service.js
-│   │
-│   ├── routes/
-│   │   ├── auth.routes.js
-│   │   ├── test.routes.js
-│   │   ├── friend.routes.js
-│   │   ├── session.routes.js
-│   │   └── codeExecution.routes.js
-│   │
-│   ├── middlewares/
-│   │   ├── auth.middleware.js
-│   │   └── error.middleware.js
-│   │
-│   ├── utils/
-│   │   └── jwt.js
-│   │
-│   ├── app.js
-│   └── server.js
-│
-├── .env
-├── package.json
-└── README.md
-````
+The backend follows a layered, modular architecture:
+
+```
+src/
+ ├── config/            # Environment & Prisma config
+ ├── middlewares/       # Auth, RBAC, validation, logging, error handling
+ ├── modules/           # Feature modules (auth, user, etc.)
+ ├── utils/             # Logger, JWT, AppError, helpers
+ ├── app.js
+ └── server.js
+```
+
+Design principles:
+
+* Separation of concerns
+* Centralized error handling
+* Structured logging
+* Environment-aware responses
+* Secure authentication flow
+* Scalable modular structure
 
 ---
 
-## ✅ Features Implemented (Phase 3)
+# 🛠 Tech Stack
 
-### 🔐 Authentication & Authorization
-
-* User registration with required fields (`name`, `email`, `password`)
-* Secure password hashing using **bcrypt**
-* JWT-based authentication
-
-  * Access Token
-  * Refresh Token
-* Middleware-protected routes
-* Decoded user context attached to requests
-
-### 🧱 Backend Architecture
-
-* Controller–Service–Middleware separation
-* Prisma ORM for database access
-* Centralized environment configuration
-* Proper error handling with HTTP status codes
-* ES Module–based Node.js setup
+* Node.js (ES Modules)
+* Express.js
+* Prisma ORM
+* PostgreSQL
+* JWT (Access + Refresh Tokens)
+* bcrypt
+* Zod (Validation)
+* Winston (Structured Logging)
 
 ---
 
-## 🗄️ Database Schema (User)
+# 🔐 Authentication System (Phase 4)
 
-```prisma
-model User {
-  id           String   @id @default(uuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  createdAt    DateTime @default(now())
-}
-```
+### Access Token
 
----
+* Short-lived
+* Used for API authentication
+* Sent via `Authorization: Bearer <token>`
 
-## ⚙️ Environment Variables
+### Refresh Token
 
-Create a `.env` file in `backend/`:
+* Long-lived
+* Used to issue new access tokens
+* Supports rotation & secure logout
 
-```env
-PORT=5000
-DATABASE_URL=postgresql://user:password@localhost:5432/codecall
-JWT_ACCESS_SECRET=your_access_secret
-JWT_REFRESH_SECRET=your_refresh_secret
-JWT_ACCESS_EXPIRES_IN=15m
-JWT_REFRESH_EXPIRES_IN=7d
-```
+### Features
 
-> ⚠️ Never commit `.env` to GitHub.
+* Secure password hashing (bcrypt)
+* Token verification
+* Refresh rotation
+* Logout invalidation
 
 ---
 
-## 🛠️ Setup & Run Locally
+# 🛡 Role-Based Access Control (RBAC)
 
-### 1️⃣ Install Dependencies
+`requireAuth` → Ensures authenticated user
+`requireRole(["ADMIN"])` → Restricts by role
 
-```bash
-npm install
-```
+Behavior:
 
-### 2️⃣ Run Prisma Migrations
-
-```bash
-npx prisma migrate dev
-npx prisma generate
-```
-
-### 3️⃣ Start Development Server
-
-```bash
-npm run dev
-```
-
-Server runs on:
-
-```
-http://localhost:5000
-```
+* `401` → Unauthenticated
+* `403` → Forbidden (insufficient role)
 
 ---
 
-## 🧪 API Endpoints (Tested)
+# 🧾 Validation Layer (Zod)
 
-### 🔹 Health Check
+All incoming requests pass through schema validation middleware.
 
-```
-GET /health
-```
+If validation fails:
+
+* Returns `400`
+* Uses structured error format
+* Integrated with global error handler
 
 ---
 
-### 🔹 Register User
+# ⚙️ Centralized Error Handling (Phase 5)
 
-```
-POST /auth/register
-```
+All errors flow through `error.middleware.js`.
 
-**Body:**
+### Development Mode
+
+* Full stack trace
+* Detailed error message
+
+### Production Mode
+
+* No stack trace
+* Generic message for unknown errors
+* Operational errors return safe messages
+
+---
+
+# 🧩 Structured Error Code System (Phase 5.6)
+
+All errors now follow a unified structure:
 
 ```json
 {
-  "name": "Test User",
-  "email": "test@codecall.dev",
-  "password": "StrongPass123"
+  "status": "fail",
+  "code": "AUTH_INVALID_TOKEN",
+  "message": "Invalid or expired token"
 }
+```
+
+### Error Categories
+
+| Category       | Example Codes                          |
+| -------------- | -------------------------------------- |
+| Authentication | AUTH_INVALID_TOKEN, AUTH_TOKEN_MISSING |
+| Authorization  | AUTH_FORBIDDEN                         |
+| Validation     | VALIDATION_ERROR                       |
+| Server         | INTERNAL_SERVER_ERROR                  |
+
+This ensures:
+
+* Consistent frontend handling
+* Predictable API behavior
+* Enterprise-grade error contracts
+
+---
+
+# 📊 Structured Logging (Winston)
+
+Request-level logging:
+
+```
+POST /api/auth/login
+GET /api/user/profile
+```
+
+Error logging:
+
+* Unexpected errors logged internally
+* Production-safe responses returned to client
+
+---
+
+# 🌍 Environment-Based Configuration
+
+Environment variables handled via `env.js`.
+
+Important variables:
+
+```
+PORT=
+DATABASE_URL=
+JWT_ACCESS_SECRET=
+JWT_REFRESH_SECRET=
+JWT_ACCESS_EXPIRES=
+JWT_REFRESH_EXPIRES=
+NODE_ENV=
 ```
 
 ---
 
-### 🔹 Login User
+# 📦 API Response Format
 
-```
-POST /auth/login
-```
-
-**Body:**
-
-```json
-{
-  "email": "test@codecall.dev",
-  "password": "StrongPass123"
-}
-```
-
-**Response:**
+### Success Response
 
 ```json
 {
   "success": true,
-  "accessToken": "...",
-  "refreshToken": "..."
+  "data": {}
 }
 ```
 
----
-
-### 🔹 Protected Route (JWT Test)
-
-```
-GET /api/test/protected
-```
-
-**Headers:**
-
-```
-Authorization: Bearer <ACCESS_TOKEN>
-```
-
-**Response:**
+### Error Response
 
 ```json
 {
-  "success": true,
-  "message": "Protected route accessed",
-  "user": {
-    "userId": "...",
-    "email": "test@codecall.dev"
-  }
+  "status": "fail",
+  "code": "ERROR_CODE",
+  "message": "Human readable message"
 }
 ```
 
 ---
 
-## 🧠 Security Notes
+# 🧪 Testing
 
-* Passwords are never stored in plain text
-* JWT secrets are stored in environment variables
-* Access tokens are short-lived
-* Refresh tokens are generated for session continuity
-* Middleware ensures protected route access
+Use Postman or similar tool.
 
----
+Test flows:
 
-## 🧩 Phase Roadmap
-
-### ✅ Phase 1
-
-* Project setup
-* Express server
-* Prisma configuration
-
-### ✅ Phase 2
-
-* Database schema
-* Base routing structure
-
-### ✅ Phase 3 (Current)
-
-* Authentication & Authorization
-* JWT middleware
-* Protected routes
-
-### 🔜 Phase 4 (Next)
-
-* Socket.IO integration
-* Real-time interview rooms
-* Authenticated WebSocket connections
-* User presence & session lifecycle
+1. Register
+2. Login → get access token
+3. Access protected route
+4. Test role-based route
+5. Test invalid token
+6. Test validation error
+7. Test production vs development behavior
 
 ---
 
-## 👨‍💻 Author
+# 🏷 Version History
 
-**Pratyush Kumar**
-Backend-focused SDE Intern aspirant
-Project: **CodeCall**
-
----
-
-## 📜 License
-
-MIT License
-
-````
+* `v1.2.0` → Logging system + stability improvements
+* `v1.3.0` → Authentication & authorization hardening
+* `v1.4.0` → Structured error code system
 
 ---
 
+# 🔮 Upcoming Phases
 
-````
+* Rate limiting & abuse protection
+* Token revocation store
+* Audit logging
+* Session management
+* WebSocket integration (real-time collaboration)
 
+---
+
+# 👨‍💻 Author
+
+Pratyush Kumar
+Backend Architecture & Security Focused Implementation
+
+---
+
+# 📄 License
+
+MIT
+
+---
+
+# ✅ What You Should Do Now
+
+1. Replace your current README with this.
+2. Commit:
+
+   ```bash
+   git add README.md
+   git commit -m "docs: update README up to Phase 5.6"
+   git push origin main
+   git checkout dev
+   git merge main
+   git push origin dev
+   ```
+
+---
+
+If you want, I can now:
+
+* Make it **more concise and recruiter-friendly**
+* Or make it **enterprise-style documentation**
+* Or create a **separate ARCHITECTURE.md** file
+
+Your backend is now at a very respectable level.
