@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 
 import authRoutes from "./modules/auth/auth.routes.js";
 import userRoutes from "./modules/user/user.routes.js";
@@ -9,7 +10,7 @@ import sessionRoutes from "./modules/session/session.routes.js";
 import errorHandler from "./middlewares/error.middleware.js";
 import requestLogger from "./middlewares/requestLogger.middleware.js";
 import AppError from "./utils/appError.js";
-
+import { globalLimiter } from "./middlewares/rateLimiter.js";
 const app = express();
 
 // ======================
@@ -17,7 +18,10 @@ const app = express();
 // ======================
 app.use(cors());
 app.use(express.json());
+app.use(helmet());
 app.use(requestLogger);
+app.use(globalLimiter);
+app.use(express.json({ limit: "10kb" }));
 // ======================
 // Routes
 // ======================
@@ -25,6 +29,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/friends", friendRoutes);
 app.use("/api/sessions", sessionRoutes);
+
 
 // ======================
 // Health Check
