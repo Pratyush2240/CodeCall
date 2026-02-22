@@ -1,281 +1,165 @@
-Excellent. This is the correct time to update documentation — after a stable tagged release (`v1.4.0`).
+---
 
-Below is a **production-grade README update** covering everything up to Phase 5.6.
-You can paste this directly into your `README.md`.
+# CodeCall Backend
+
+Secure, modular, production-ready backend built with Node.js, Express, PostgreSQL, and Prisma.
+
+Designed using layered architecture, security-first principles, and structured development phases.
 
 ---
 
-# CodeCall – Backend
+##  Tech Stack
 
-CodeCall is a real-time collaborative interview practice platform that enables friends to practice technical interviews together with secure authentication, shared sessions, and AI-powered feedback (upcoming).
-
-This repository contains the **backend service**, built with a clean, scalable, production-ready architecture.
-
----
-
-# 🚀 Current Release
-
-**Latest Version:** `v1.4.0`
-**Phase:** 5.6 – Structured Error Code System
-**Status:** Production-ready backend foundation
+* **Node.js**
+* **Express.js**
+* **PostgreSQL**
+* **Prisma ORM**
+* **Zod (Validation)**
+* **JWT (Authentication)**
+* **Winston (Logging)**
+* **Helmet (Security Headers)**
+* **express-rate-limit (API Protection)**
 
 ---
 
-# 🏗 Architecture Overview
+##  Architecture Overview
 
-The backend follows a layered, modular architecture:
+```text
+Client Request
+      ↓
+Request Logger (Winston)
+      ↓
+Rate Limiter
+      ↓
+Validation (Zod)
+      ↓
+Authentication (JWT)
+      ↓
+Authorization (RBAC)
+      ↓
+Controller
+      ↓
+Service Layer
+      ↓
+Database (Prisma)
+      ↓
+Global Error Handler
+```
+
+Project structure:
 
 ```
-src/
- ├── config/            # Environment & Prisma config
- ├── middlewares/       # Auth, RBAC, validation, logging, error handling
- ├── modules/           # Feature modules (auth, user, etc.)
- ├── utils/             # Logger, JWT, AppError, helpers
+backend/src/
+ ├── config/
+ ├── middlewares/
+ ├── modules/
+ ├── utils/
  ├── app.js
  └── server.js
 ```
 
-Design principles:
+---
 
-* Separation of concerns
+##  Security & Stability Highlights
+
+* JWT Access & Refresh Token Authentication
+* Role-Based Access Control (RBAC)
+* Global Rate Limiting
+* Auth-specific brute-force protection
+* Progressive login slowdown
+* Secure HTTP headers via Helmet
+* Payload size limiting
+* Zod-based request validation
+* Fail-fast environment variable validation
 * Centralized error handling
-* Structured logging
-* Environment-aware responses
-* Secure authentication flow
-* Scalable modular structure
+* Structured logging with Winston
 
 ---
 
-# 🛠 Tech Stack
+##  Environment Setup
 
-* Node.js (ES Modules)
-* Express.js
-* Prisma ORM
-* PostgreSQL
-* JWT (Access + Refresh Tokens)
-* bcrypt
-* Zod (Validation)
-* Winston (Structured Logging)
+Create a `.env` file:
 
----
+```env
+NODE_ENV=development
+PORT=5000
+DATABASE_URL=postgresql://postgres:password%40encoded@localhost:5432/codecall
 
-# 🔐 Authentication System (Phase 4)
+JWT_ACCESS_SECRET=your_super_long_access_secret_min_32_characters
+JWT_REFRESH_SECRET=your_super_long_refresh_secret_min_32_characters
 
-### Access Token
-
-* Short-lived
-* Used for API authentication
-* Sent via `Authorization: Bearer <token>`
-
-### Refresh Token
-
-* Long-lived
-* Used to issue new access tokens
-* Supports rotation & secure logout
-
-### Features
-
-* Secure password hashing (bcrypt)
-* Token verification
-* Refresh rotation
-* Logout invalidation
-
----
-
-# 🛡 Role-Based Access Control (RBAC)
-
-`requireAuth` → Ensures authenticated user
-`requireRole(["ADMIN"])` → Restricts by role
-
-Behavior:
-
-* `401` → Unauthenticated
-* `403` → Forbidden (insufficient role)
-
----
-
-# 🧾 Validation Layer (Zod)
-
-All incoming requests pass through schema validation middleware.
-
-If validation fails:
-
-* Returns `400`
-* Uses structured error format
-* Integrated with global error handler
-
----
-
-# ⚙️ Centralized Error Handling (Phase 5)
-
-All errors flow through `error.middleware.js`.
-
-### Development Mode
-
-* Full stack trace
-* Detailed error message
-
-### Production Mode
-
-* No stack trace
-* Generic message for unknown errors
-* Operational errors return safe messages
-
----
-
-# 🧩 Structured Error Code System (Phase 5.6)
-
-All errors now follow a unified structure:
-
-```json
-{
-  "status": "fail",
-  "code": "AUTH_INVALID_TOKEN",
-  "message": "Invalid or expired token"
-}
+JWT_ACCESS_EXPIRES=15m
+JWT_REFRESH_EXPIRES=7d
 ```
 
-### Error Categories
-
-| Category       | Example Codes                          |
-| -------------- | -------------------------------------- |
-| Authentication | AUTH_INVALID_TOKEN, AUTH_TOKEN_MISSING |
-| Authorization  | AUTH_FORBIDDEN                         |
-| Validation     | VALIDATION_ERROR                       |
-| Server         | INTERNAL_SERVER_ERROR                  |
-
-This ensures:
-
-* Consistent frontend handling
-* Predictable API behavior
-* Enterprise-grade error contracts
+> If your DB password contains special characters (e.g. `@`), URL-encode them (`@` → `%40`).
 
 ---
 
-# 📊 Structured Logging (Winston)
+##  Running the Project
 
-Request-level logging:
+Install dependencies:
+
+```bash
+npm install
+```
+
+Development:
+
+```bash
+npm run dev
+```
+
+Production:
+
+```bash
+npm start
+```
+
+Health check:
 
 ```
-POST /api/auth/login
-GET /api/user/profile
-```
-
-Error logging:
-
-* Unexpected errors logged internally
-* Production-safe responses returned to client
-
----
-
-# 🌍 Environment-Based Configuration
-
-Environment variables handled via `env.js`.
-
-Important variables:
-
-```
-PORT=
-DATABASE_URL=
-JWT_ACCESS_SECRET=
-JWT_REFRESH_SECRET=
-JWT_ACCESS_EXPIRES=
-JWT_REFRESH_EXPIRES=
-NODE_ENV=
+GET /health
 ```
 
 ---
 
-# 📦 API Response Format
+##  Branching Strategy
 
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {}
-}
+```
+feature/* → dev → main
 ```
 
-### Error Response
+* `feature/*` → Feature development
+* `dev` → Integration branch
+* `main` → Stable release branch
 
-```json
-{
-  "status": "fail",
-  "code": "ERROR_CODE",
-  "message": "Human readable message"
-}
-```
+Issues close when merged into `main`.
 
 ---
 
-# 🧪 Testing
+##  Detailed Architecture & Development Phases
 
-Use Postman or similar tool.
+For full architectural breakdown and phase-by-phase development:
 
-Test flows:
-
-1. Register
-2. Login → get access token
-3. Access protected route
-4. Test role-based route
-5. Test invalid token
-6. Test validation error
-7. Test production vs development behavior
+ See [ARCHITECTURE.md](./ARCHITECTURE.md)
 
 ---
 
-# 🏷 Version History
+##  Roadmap
 
-* `v1.2.0` → Logging system + stability improvements
-* `v1.3.0` → Authentication & authorization hardening
-* `v1.4.0` → Structured error code system
-
----
-
-# 🔮 Upcoming Phases
-
-* Rate limiting & abuse protection
-* Token revocation store
-* Audit logging
-* Session management
-* WebSocket integration (real-time collaboration)
+* Refresh Token Rotation
+* Correlation ID Logging
+* Audit Logging
+* Advanced Prisma Transactions
+* Log File Rotation
 
 ---
 
-# 👨‍💻 Author
+##  License
 
-Pratyush Kumar
-Backend Architecture & Security Focused Implementation
-
----
-
-# 📄 License
-
-MIT
+MIT License
 
 ---
 
-# ✅ What You Should Do Now
 
-1. Replace your current README with this.
-2. Commit:
-
-   ```bash
-   git add README.md
-   git commit -m "docs: update README up to Phase 5.6"
-   git push origin main
-   git checkout dev
-   git merge main
-   git push origin dev
-   ```
-
----
-
-If you want, I can now:
-
-* Make it **more concise and recruiter-friendly**
-* Or make it **enterprise-style documentation**
-* Or create a **separate ARCHITECTURE.md** file
-
-Your backend is now at a very respectable level.
