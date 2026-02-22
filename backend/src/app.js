@@ -11,6 +11,8 @@ import errorHandler from "./middlewares/error.middleware.js";
 import requestLogger from "./middlewares/requestLogger.middleware.js";
 import AppError from "./utils/appError.js";
 import { globalLimiter } from "./middlewares/rateLimiter.js";
+import "./config/env.validation.js";
+
 const app = express();
 
 // ======================
