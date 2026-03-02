@@ -6,9 +6,18 @@ import {
   verifyRefreshToken
 } from "../../utils/jwt.js";
 import AppError from "../../utils/appError.js";
+import crypto from "crypto";
 
 /**
- * Register User
+ * Utility: Hash refresh token before storing
+ */
+const hashToken = (token) =>
+  crypto.createHash("sha256").update(token).digest("hex");
+
+/**
+ * ================================
+ * REGISTER USER
+ * ================================
  */
 export const registerUser = async ({ username, email, password }) => {
   const existingUser = await prisma.user.findFirst({
@@ -40,7 +49,9 @@ export const registerUser = async ({ username, email, password }) => {
 };
 
 /**
- * Login User
+ * ================================
+ * LOGIN USER
+ * ================================
  */
 export const loginUser = async ({ email, password }) => {
   const user = await prisma.user.findUnique({
@@ -66,54 +77,93 @@ export const loginUser = async ({ email, password }) => {
     userId: user.id
   });
 
-  // Store refresh token in DB
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { refreshToken }
+  const hashedToken = hashToken(refreshToken);
+
+  await prisma.refreshToken.create({
+    data: {
+      tokenHash: hashedToken,
+      userId: user.id,
+      expiresAt: new Date(
+        Date.now() + Number(process.env.REFRESH_TOKEN_EXPIRY_MS)
+      )
+    }
   });
 
   return { accessToken, refreshToken };
 };
 
 /**
- * Refresh Token (WITH ROTATION)
+ * ================================
+ * REFRESH TOKEN (WITH ROTATION)
+ * ================================
  */
 export const refreshUserToken = async (refreshToken) => {
   if (!refreshToken) {
     throw new AppError("Refresh token missing", 401);
   }
 
-  // 1. Verify refresh token signature
+  const hashedToken = hashToken(refreshToken);
+
+  const storedToken = await prisma.refreshToken.findUnique({
+    where: { tokenHash: hashedToken }
+  });
+
+  // 🔎 Possible reuse attempt
+  if (!storedToken) {
+    try {
+      const payload = verifyRefreshToken(refreshToken);
+
+      // Revoke all sessions of this user
+      await prisma.refreshToken.deleteMany({
+        where: { userId: payload.userId }
+      });
+
+    } catch (err) {
+      throw new AppError("Invalid refresh token", 403);
+    }
+
+    throw new AppError("Refresh token reuse detected", 403);
+  }
+
+  // Expired token cleanup
+  if (storedToken.expiresAt < new Date()) {
+    await prisma.refreshToken.delete({
+      where: { id: storedToken.id }
+    });
+
+    throw new AppError("Refresh token expired", 401);
+  }
+
   const payload = verifyRefreshToken(refreshToken);
 
-  // 2. Fetch user
+  // ROTATION: delete old token
+  await prisma.refreshToken.delete({
+    where: { id: storedToken.id }
+  });
+
+  const newRefreshToken = generateRefreshToken({
+    userId: payload.userId
+  });
+
+  const newHashedToken = hashToken(newRefreshToken);
+
+  await prisma.refreshToken.create({
+    data: {
+      tokenHash: newHashedToken,
+      userId: payload.userId,
+      expiresAt: new Date(
+        Date.now() + Number(process.env.REFRESH_TOKEN_EXPIRY_MS)
+      )
+    }
+  });
+
   const user = await prisma.user.findUnique({
     where: { id: payload.userId }
   });
 
-  if (!user) {
-    throw new AppError("Invalid refresh token", 403);
-  }
-
-  // 3. Match refresh token stored in DB
-  if (user.refreshToken !== refreshToken) {
-    throw new AppError("Refresh token mismatch", 403);
-  }
-
-  // 4. Generate new tokens (ROTATION)
   const newAccessToken = generateAccessToken({
     userId: user.id,
     role: user.role
-  });
-
-  const newRefreshToken = generateRefreshToken({
-    userId: user.id
-  });
-
-  // 5. Replace refresh token in DB
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { refreshToken: newRefreshToken }
   });
 
   return {
@@ -123,12 +173,19 @@ export const refreshUserToken = async (refreshToken) => {
 };
 
 /**
- * Logout (Invalidate Refresh Token)
+ * ================================
+ * LOGOUT USER (Invalidate Session)
+ * ================================
  */
-export const logoutUser = async (userId) => {
-  await prisma.user.update({
-    where: { id: userId },
-    data: { refreshToken: null }
+export const logoutUser = async (refreshToken) => {
+  if (!refreshToken) {
+    throw new AppError("Refresh token missing", 400);
+  }
+
+  const hashedToken = hashToken(refreshToken);
+
+  await prisma.refreshToken.deleteMany({
+    where: { tokenHash: hashedToken }
   });
 
   return { message: "Logged out successfully" };
