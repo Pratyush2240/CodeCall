@@ -1,28 +1,42 @@
 import logger from "../utils/logger.js";
 
 const sendErrorDev = (err, req, res) => {
-  logger.warn(`${req.method} ${req.originalUrl} - ${err.message}`);
+  logger.error(err.message, {
+    correlationId: req.correlationId,
+    method: req.method,
+    url: req.originalUrl,
+    stack: err.stack
+  });
 
-res.status(err.statusCode).json({
-  status: err.status,
-  code: err.code || "INTERNAL_SERVER_ERROR",
-  message: err.message,
-  stack: err.stack,
+  res.status(err.statusCode).json({
+    status: err.status,
+    code: err.code || "INTERNAL_SERVER_ERROR",
+    message: err.message,
+    stack: err.stack,
   });
 };
 
 const sendErrorProd = (err, req, res) => {
   if (err.isOperational) {
-    logger.warn(`${req.method} ${req.originalUrl} - ${err.message}`);
+    logger.warn(err.message, {
+      correlationId: req.correlationId,
+      method: req.method,
+      url: req.originalUrl
+    });
 
-    res.status(err.statusCode).json({
+    return res.status(err.statusCode).json({
       status: err.status,
       code: err.code || "INTERNAL_SERVER_ERROR",
       message: err.message,
     });
   }
 
-  logger.error(err);
+  logger.error("Unhandled error", {
+    correlationId: req.correlationId,
+    method: req.method,
+    url: req.originalUrl,
+    stack: err.stack
+  });
 
   return res.status(500).json({
     status: "error",
