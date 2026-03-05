@@ -8,7 +8,8 @@ import friendRoutes from "./modules/friend/friend.routes.js";
 import sessionRoutes from "./modules/session/session.routes.js";
 
 import errorHandler from "./middlewares/error.middleware.js";
-import requestLogger from "./middlewares/requestLogger.middleware.js";
+import correlationMiddleware from "./middlewares/correlation.middleware.js";
+import { requestLogger } from "./middlewares/requestLogger.middleware.js";
 import AppError from "./utils/appError.js";
 import { globalLimiter } from "./middlewares/rateLimiter.js";
 
@@ -22,6 +23,7 @@ const app = express();
 // ======================
 app.use(cors());
 app.use(helmet());
+app.use(correlationMiddleware);
 app.use(requestLogger);
 app.use(globalLimiter);
 app.use(express.json({ limit: "10kb" }));
