@@ -12,6 +12,7 @@ import correlationMiddleware from "./middlewares/correlation.middleware.js";
 import { requestLogger } from "./middlewares/requestLogger.middleware.js";
 import AppError from "./utils/appError.js";
 import { globalLimiter } from "./middlewares/rateLimiter.js";
+import healthRoutes from "./modules/health/health.routes.js";
 
 import "./config/env.validation.js";
 
@@ -34,7 +35,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/friends", friendRoutes);
 app.use("/api/sessions", sessionRoutes);
-
+app.use("/api/health", healthRoutes);
 
 // ======================
 // Health Check
