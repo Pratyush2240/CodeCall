@@ -15,6 +15,8 @@ import { globalLimiter } from "./middlewares/rateLimiter.js";
 import healthRoutes from "./modules/health/health.routes.js";
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./config/swagger.js";
+import metricsRoutes from "./modules/metrics/metrics.routes.js";
+import { metricsMiddleware } from "./middlewares/metrics.middleware.js";
 
 import "./config/env.validation.js";
 
@@ -39,6 +41,8 @@ app.use("/api/friends", friendRoutes);
 app.use("/api/sessions", sessionRoutes);
 app.use("/api/health", healthRoutes);
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use("/api/metrics", metricsRoutes);
+app.use(metricsMiddleware);
 
 // ======================
 // Health Check
