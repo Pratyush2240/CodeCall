@@ -3,8 +3,11 @@ console.log("USER ROUTES LOADED");
 import express from "express";
 import { requireAuth } from "../../middlewares/requireAuth.js";
 import { requireRole } from "../../middlewares/requireRole.js";
+import { cacheMiddleware } from "../../middlewares/cache.middleware.js";
+import { getUsers } from "./user.controller.js";
 
 const router = express.Router();
+router.get("/users", cacheMiddleware(120), getUsers);
 
 router.get("/me", requireAuth, (req, res) => {
   res.json({

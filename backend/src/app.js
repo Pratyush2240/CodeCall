@@ -6,47 +6,63 @@ import authRoutes from "./modules/auth/auth.routes.js";
 import userRoutes from "./modules/user/user.routes.js";
 import friendRoutes from "./modules/friend/friend.routes.js";
 import sessionRoutes from "./modules/session/session.routes.js";
+import healthRoutes from "./modules/health/health.routes.js";
+import metricsRoutes from "./modules/metrics/metrics.routes.js";
 
 import errorHandler from "./middlewares/error.middleware.js";
 import correlationMiddleware from "./middlewares/correlation.middleware.js";
 import { requestLogger } from "./middlewares/requestLogger.middleware.js";
-import AppError from "./utils/appError.js";
 import { globalLimiter } from "./middlewares/rateLimiter.js";
-import healthRoutes from "./modules/health/health.routes.js";
-import swaggerUi from "swagger-ui-express";
-import swaggerSpec from "./config/swagger.js";
-import metricsRoutes from "./modules/metrics/metrics.routes.js";
 import { metricsMiddleware } from "./middlewares/metrics.middleware.js";
 
-import "./config/env.validation.js";
+import swaggerUi from "swagger-ui-express";
+import swaggerSpec from "./config/swagger.js";
 
+
+import AppError from "./utils/appError.js";
+
+import "./config/env.validation.js";
 
 const app = express();
 
 // ======================
 // Global Middlewares
 // ======================
+
 app.use(cors());
 app.use(helmet());
+app.use(express.json({ limit: "10kb" }));
+
 app.use(correlationMiddleware);
 app.use(requestLogger);
 app.use(globalLimiter);
-app.use(express.json({ limit: "10kb" }));
+app.use(metricsMiddleware);
+
 // ======================
-// Routes
+// Monitoring
 // ======================
+
+
+
+// ======================
+// API Routes
+// ======================
+
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/friends", friendRoutes);
 app.use("/api/sessions", sessionRoutes);
+
 app.use("/api/health", healthRoutes);
-app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use("/api/metrics", metricsRoutes);
-app.use(metricsMiddleware);
+
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 
 // ======================
-// Health Check
+// Root Health Check
 // ======================
+
 app.get("/health", (_, res) => {
   res.json({
     status: "OK",
@@ -54,9 +70,12 @@ app.get("/health", (_, res) => {
   });
 });
 
+
+
 // ======================
 // 404 Handler
 // ======================
+
 app.all("*", (req, res, next) => {
   next(new AppError(`Cannot find ${req.originalUrl} on this server`, 404));
 });
@@ -64,6 +83,7 @@ app.all("*", (req, res, next) => {
 // ======================
 // Global Error Handler
 // ======================
+
 app.use(errorHandler);
 
 export default app;
