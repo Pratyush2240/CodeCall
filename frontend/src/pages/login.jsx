@@ -1,5 +1,8 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Login.css';
+import API from '../api/axios';
+
 
 /* ─── Inline SVG Icons ───────────────────────────── */
 const TerminalIcon = () => (
@@ -49,17 +52,34 @@ const EyeIcon = ({ show }) => show ? (
 
 /* ─── Component ──────────────────────────────────── */
 export default function LoginPage() {
-  const [email, setEmail]     = useState('');
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
-  const [showPwd, setShowPwd] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [showPwd, setShowPwd]   = useState(false);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
+  
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     setLoading(true);
-    // TODO: wire to auth API
-    await new Promise(r => setTimeout(r, 1200));
-    setLoading(false);
+
+    try {
+      const response = await API.post('/auth/login', { email, password });
+      console.log('[CodeCall] Login success:', response.data);
+      navigate('/dashboard');
+    } catch (err) {
+      // Prefer the server's own message, fall back gracefully
+      const message =
+        err.response?.data?.message ??
+        (err.request ? 'Unable to reach the server. Check your connection.' : err.message) ??
+        'Something went wrong. Please try again.';
+      setError(message);
+      console.error('[CodeCall] Login error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -140,6 +160,20 @@ export default function LoginPage() {
               </button>
             </div>
           </div>
+
+          {/* Error banner */}
+          {error && (
+            <div className="form-error" role="alert" aria-live="assertive">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              {error}
+            </div>
+          )}
 
           {/* Submit */}
           <button

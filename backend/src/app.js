@@ -29,7 +29,26 @@ const app = express();
 // Global Middlewares
 // ======================
 
-app.use(cors());
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+
+    // In production, lock to CLIENT_URL env var
+    if (process.env.NODE_ENV === "production") {
+      return origin === process.env.CLIENT_URL
+        ? callback(null, true)
+        : callback(new Error("CORS: origin not allowed"));
+    }
+
+    // In development, allow any localhost / 127.0.0.1 port
+    const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+    return isLocalhost
+      ? callback(null, true)
+      : callback(new Error("CORS: origin not allowed"));
+  },
+  credentials: true, // required for withCredentials / cookie-based auth
+}));
 app.use(helmet());
 app.use(express.json({ limit: "10kb" }));
 
