@@ -9,6 +9,7 @@ export const globalLimiter = rateLimit({
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === "development",
   message: {
     success: false,
     message: "Too many requests. Please try again later."
@@ -23,6 +24,7 @@ export const authLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === "development",
   message: {
     success: false,
     message: "Too many login attempts. Try again later."
