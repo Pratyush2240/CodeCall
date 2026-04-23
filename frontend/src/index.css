@@ -1,0 +1,84 @@
+/* =====================================================
+   CodeCall — Global Design System
+   ===================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* ─── Reset ──────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ─── Tokens ─────────────────────────────────────── */
+:root {
+  /* Neutrals */
+  --color-bg:           #F0F2F5;
+  --color-surface:      #FFFFFF;
+  --color-border:       #E4E7EC;
+  --color-border-focus: #2563EB;
+  --color-input-bg:     #F7F8FA;
+
+  /* Text */
+  --color-text-primary:   #0D0F12;
+  --color-text-secondary: #6B7280;
+  --color-text-tertiary:  #9CA3AF;
+  --color-text-muted:     #B0B8C8;
+
+  /* Blue accent */
+  --color-accent:       #2563EB;
+  --color-accent-hover: #1D4ED8;
+  --color-accent-light: #EFF6FF;
+
+  /* Shadows */
+  --shadow-card: 0 2px 4px rgba(0,0,0,0.04), 0 8px 32px rgba(0,0,0,0.06);
+  --shadow-btn:  0 4px 16px rgba(37,99,235,0.30);
+
+  /* Radii */
+  --radius-card: 20px;
+  --radius-input: 12px;
+  --radius-btn:   12px;
+  --radius-icon:  14px;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+
+  /* Typography */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ─── Base ───────────────────────────────────────── */
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+}
+
+/* ─── Spinner ─────────────────────────────────────── */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+  flex-shrink: 0;
+}
+
