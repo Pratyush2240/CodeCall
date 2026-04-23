@@ -1,0 +1,128 @@
+/* ── RoomCard ────────────────────────────────────── */
+.room-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: #ffffff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+
+.room-card:hover {
+  border-color: #D0D5E0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* Icon */
+.room-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Info */
+.room-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.room-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  display: block;
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+}
+
+.room-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.room-status {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.room-status--active  { color: #16A34A; }
+.room-status--offline { color: var(--color-text-muted); }
+
+.room-meta-divider {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.room-updated,
+.room-participants {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+/* Right */
+.room-card-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* Avatar Group */
+.avatar-group {
+  display: flex;
+  align-items: center;
+}
+
+.avatar-chip {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-left: -6px;
+  position: relative;
+}
+
+.avatar-chip:first-child { margin-left: 0; }
+
+.avatar-chip--extra {
+  background: var(--color-input-bg);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
+  font-size: 8.5px;
+}
+
+/* More button */
+.room-more-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.room-more-btn:hover {
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+}
