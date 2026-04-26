@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import './RoomCard.css';
 
 const MoreIcon = () => (
@@ -83,9 +84,28 @@ const iconCycle = [
 export default function RoomCard({ room, index = 0 }) {
   const { name, status, lastUpdated, participants } = room;
   const { icon, color } = iconCycle[index % iconCycle.length];
+  const navigate = useNavigate();
+
+  /* Resolve the room ID from whichever field the API returns */
+  const roomId = room.id ?? room._id ?? room.name;
+
+  const handleCardClick = () => {
+    navigate(`/room/${roomId}`);
+  };
+
+  const handleMoreClick = (e) => {
+    e.stopPropagation(); // prevent card navigation when clicking ⋮
+  };
 
   return (
-    <div className="room-card">
+    <div
+      className="room-card room-card--clickable"
+      onClick={handleCardClick}
+      role="button"
+      tabIndex={0}
+      aria-label={`Open room ${name}`}
+      onKeyDown={e => e.key === 'Enter' && handleCardClick()}
+    >
       <RoomIcon color={color} icon={icon} />
 
       <div className="room-info">
@@ -103,7 +123,11 @@ export default function RoomCard({ room, index = 0 }) {
 
       <div className="room-card-right">
         <AvatarGroup participants={participants} />
-        <button className="room-more-btn" aria-label="Room options">
+        <button
+          className="room-more-btn"
+          aria-label="Room options"
+          onClick={handleMoreClick}
+        >
           <MoreIcon />
         </button>
       </div>

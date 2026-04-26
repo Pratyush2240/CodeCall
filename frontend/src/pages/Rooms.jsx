@@ -1,17 +1,38 @@
+import { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import RoomCard from '../components/RoomCard';
+import { getRooms } from '../api/rooms';
 import '../pages/Dashboard.css'; // Reuse dashboard layout classes
 
-const allRooms = [
-  { name: 'frontend-refactor', status: 'active',  lastUpdated: 'Updated 2 hours ago',  participants: 4 },
-  { name: 'api-debug',         status: 'offline', lastUpdated: 'Updated yesterday',     participants: 2 },
-  { name: 'auth-flow-review',  status: 'offline', lastUpdated: 'Updated 3 days ago',   participants: 8 },
-  { name: 'payment-gateway',   status: 'active',  lastUpdated: 'Updated 5 mins ago',   participants: 3 },
-  { name: 'design-sync',       status: 'offline', lastUpdated: 'Updated 1 week ago',   participants: 12 },
-];
-
 export default function RoomsPage() {
+  const [rooms, setRooms]       = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getRooms();
+        if (!cancelled) setRooms(data);
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err?.response?.data?.message ?? 'Failed to load rooms. Please try again.'
+          );
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <div className="dashboard-shell">
       <Navbar activePage="rooms" />
@@ -26,11 +47,29 @@ export default function RoomsPage() {
             </p>
           </div>
 
-          <div className="room-list">
-            {allRooms.map((room, i) => (
-              <RoomCard key={room.name} room={room} index={i} />
-            ))}
-          </div>
+          {loading && (
+            <div className="rooms-state-msg">Loading rooms…</div>
+          )}
+
+          {error && !loading && (
+            <div className="rooms-state-msg rooms-state-msg--error" role="alert">
+              {error}
+            </div>
+          )}
+
+          {!loading && !error && rooms.length === 0 && (
+            <div className="rooms-state-msg">
+              No rooms found. Head to the dashboard to create one!
+            </div>
+          )}
+
+          {!loading && !error && rooms.length > 0 && (
+            <div className="room-list">
+              {rooms.map((room, i) => (
+                <RoomCard key={room.id ?? room._id ?? room.name} room={room} index={i} />
+              ))}
+            </div>
+          )}
         </main>
 
         {/* ── Right Sidebar ── */}

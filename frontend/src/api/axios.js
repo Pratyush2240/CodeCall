@@ -5,6 +5,18 @@ const API = axios.create({
   withCredentials: true, // sends cookies with every request (cookie-based auth)
 });
 
+/* ─── Request Interceptor ────────────────────────────
+   Attaches the stored access token as a Bearer header
+   on every outgoing request.
+──────────────────────────────────────────────────── */
+API.interceptors.request.use((config) => {
+  const token = localStorage.getItem("accessToken");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 /* ─── Response Interceptor ───────────────────────────
    Passthrough today — extend here for:
    · 401 → token refresh / redirect to login
@@ -17,3 +29,4 @@ API.interceptors.response.use(
 );
 
 export default API;
+
