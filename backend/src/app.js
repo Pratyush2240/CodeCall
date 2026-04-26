@@ -6,6 +6,7 @@ import authRoutes from "./modules/auth/auth.routes.js";
 import userRoutes from "./modules/user/user.routes.js";
 import friendRoutes from "./modules/friend/friend.routes.js";
 import sessionRoutes from "./modules/session/session.routes.js";
+import roomRoutes from "./modules/room/room.routes.js";
 import healthRoutes from "./modules/health/health.routes.js";
 import metricsRoutes from "./modules/metrics/metrics.routes.js";
 
@@ -71,6 +72,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/friends", friendRoutes);
 app.use("/api/sessions", sessionRoutes);
+app.use("/api/rooms", roomRoutes);
 
 app.use("/api/health", healthRoutes);
 app.use("/api/metrics", metricsRoutes);

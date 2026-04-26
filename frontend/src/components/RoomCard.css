@@ -1,4 +1,18 @@
 /* ── RoomCard ────────────────────────────────────── */
+.room-card--clickable {
+  cursor: pointer;
+}
+
+.room-card--clickable:hover {
+  border-color: var(--color-accent);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.12);
+}
+
+.room-card--clickable:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 .room-card {
   display: flex;
   align-items: center;

@@ -67,8 +67,13 @@ export default function LoginPage() {
 
     try {
       const response = await API.post('/auth/login', { email, password });
+      const { accessToken } = response.data;
+      if (accessToken) {
+        localStorage.setItem('accessToken', accessToken);
+      }
       console.log('[CodeCall] Login success:', response.data);
       navigate('/dashboard');
+
     } catch (err) {
       // Prefer the server's own message, fall back gracefully
       const message =
