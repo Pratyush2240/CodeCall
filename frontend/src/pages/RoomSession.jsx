@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getRoom, endRoom } from '../api/rooms';
 import { useSocket } from '../hooks/useSocket';
 import { usePresence } from '../hooks/usePresence';
 import { useCollaborativeCode } from '../hooks/useCollaborativeCode';
+import { useChat } from '../hooks/useChat';
 import CodeEditor from '../components/CodeEditor';
 import './RoomSession.css';
 
@@ -55,6 +56,21 @@ const CodeEditorIcon = () => (
     strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="16 18 22 12 16 6" />
     <polyline points="8 6 2 12 8 18" />
+  </svg>
+);
+
+const ChatIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+  </svg>
+);
+
+const SendIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="22" y1="2" x2="11" y2="13" />
+    <polygon points="22 2 15 22 11 13 2 9 22 2" />
   </svg>
 );
 
@@ -114,6 +130,17 @@ export default function RoomSessionPage() {
   const { code, handleEditorChange } = useCollaborativeCode(socket, roomId, {
     onLocalChange: emitTyping,
   });
+
+  /* ── Room chat ── */
+  const { messages, sendMessage, scrollRef } = useChat(socket, roomId);
+  const [chatInput, setChatInput] = useState('');
+
+  const handleSendChat = (e) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+    sendMessage(chatInput);
+    setChatInput('');
+  };
 
   /* Resolve logged-in user ID from the stored JWT payload */
   const currentUserId = (() => {
@@ -367,11 +394,63 @@ export default function RoomSessionPage() {
             }
           </div>
 
-          <div className="rs-sidebar-footer">
-            <button className="rs-invite-btn">
-              <UsersIcon />
-              Invite Others
-            </button>
+          {/* ── Chat panel ── */}
+          <div className="rs-chat-panel">
+            <div className="rs-chat-header">
+              <ChatIcon />
+              <span className="rs-chat-title">Chat</span>
+              <span className="rs-chat-count">{messages.length}</span>
+            </div>
+
+            <div className="rs-chat-messages" ref={scrollRef}>
+              {messages.length === 0 ? (
+                <p className="rs-chat-empty">No messages yet. Say hello!</p>
+              ) : (
+                messages.map((msg) => {
+                  const isSelf = msg.userId === currentUserId;
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`rs-chat-bubble ${isSelf ? 'rs-chat-bubble--self' : ''}`}
+                    >
+                      {!isSelf && (
+                        <span className="rs-chat-sender">
+                          User {msg.userId.slice(0, 6)}
+                        </span>
+                      )}
+                      <span className="rs-chat-text">{msg.text}</span>
+                      <span className="rs-chat-time">
+                        {new Date(msg.timestamp).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <form className="rs-chat-input-row" onSubmit={handleSendChat}>
+              <input
+                id="chat-input"
+                className="rs-chat-input"
+                type="text"
+                placeholder="Type a message…"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                autoComplete="off"
+              />
+              <button
+                id="chat-send-btn"
+                className="rs-chat-send"
+                type="submit"
+                disabled={!chatInput.trim()}
+                aria-label="Send message"
+              >
+                <SendIcon />
+              </button>
+            </form>
           </div>
         </aside>
 
