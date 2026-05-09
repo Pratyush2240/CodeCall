@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getRoom, endRoom } from '../api/rooms';
+import { useSocket } from '../hooks/useSocket';
+import { useCollaborativeCode } from '../hooks/useCollaborativeCode';
+import CodeEditor from '../components/CodeEditor';
 import './RoomSession.css';
 
 /* ── Icons ────────────────────────────────────────────────────── */
@@ -86,6 +89,10 @@ export default function RoomSessionPage() {
   const [countdown, setCountdown] = useState(5);
   const [ending, setEnding]       = useState(false);   // PATCH in-flight
   const [showConfirm, setShowConfirm] = useState(false); // confirm dialog
+
+  /* ── Socket connection + collaborative code sync ── */
+  const { socket, isConnected } = useSocket(roomId);
+  const { code, handleEditorChange } = useCollaborativeCode(socket, roomId);
 
   /* Resolve logged-in user ID from the stored JWT payload */
   const currentUserId = (() => {
@@ -280,46 +287,22 @@ export default function RoomSessionPage() {
             </div>
           </div>
 
-          {/* Editor empty state */}
-          <div className="rs-editor-empty">
-            <div className="rs-editor-empty-icon">
-              <CodeEditorIcon />
-            </div>
-            <h3 className="rs-editor-empty-title">Code Editor</h3>
-            <p className="rs-editor-empty-sub">
-              The collaborative editor will appear here once a file is opened.
-            </p>
-
-            {/* Room meta from API */}
-            <div className="rs-room-meta">
-              <div className="rs-meta-row">
-                <span className="rs-meta-label">Room ID</span>
-                <code className="rs-meta-value">{roomId}</code>
-              </div>
-              <div className="rs-meta-row">
-                <span className="rs-meta-label">Invite Code</span>
-                <code className="rs-meta-value rs-meta-value--accent">{roomCode}</code>
-              </div>
-              <div className="rs-meta-row">
-                <span className="rs-meta-label">Status</span>
-                <span className={`rs-meta-value rs-meta-status--${roomStatus}`}>
-                  {roomStatus}
-                </span>
-              </div>
-              {createdAt && (
-                <div className="rs-meta-row">
-                  <span className="rs-meta-label">Created</span>
-                  <span className="rs-meta-value">{createdAt}</span>
-                </div>
-              )}
-            </div>
-          </div>
+          {/* Code editor — live collaborative */}
+          <CodeEditor
+            value={code}
+            onChange={handleEditorChange}
+            isConnected={isConnected}
+          />
 
           {/* Status bar — dynamic values only */}
           <div className="rs-status-bar" aria-label="Session status">
             <span className="rs-status-item rs-status-ready">⟳ {roomStatus}</span>
             <span className="rs-status-item">{roomName}</span>
+            <span className="rs-status-item" title="Invite code">📋 {roomCode}</span>
             <span className="rs-status-spacer" />
+            <span className="rs-status-item">
+              {isConnected ? "🟢 Connected" : "⏳ Connecting…"}
+            </span>
             <span className="rs-status-item">{participants.length} participants</span>
           </div>
         </main>

@@ -1,22 +1,23 @@
+// Handles realtime collaborative code editing within a room.
 export const registerCodeEvents = (io, socket) => {
-  socket.on("code-change", ({ sessionId, code }) => {
-    // Broadcast updated code to everyone else in the session
-    socket.to(sessionId).emit("code-update", {
+  socket.on("code-change", ({ roomId, code }) => {
+    // Broadcast updated code to everyone else in the room
+    socket.to(roomId).emit("code-update", {
       code,
       userId: socket.user.userId,
     });
   });
 
-  socket.on("code-sync-request", ({ sessionId }) => {
-    // Used when a new user joins and needs current code
-    socket.to(sessionId).emit("code-sync-requested", {
+  socket.on("code-sync-request", ({ roomId }) => {
+    // Used when a new user joins and needs the current code state
+    socket.to(roomId).emit("code-sync-requested", {
       requesterId: socket.user.userId,
     });
   });
 
-  socket.on("code-sync-response", ({ sessionId, code }) => {
-    // Send current code to a specific user
-    socket.to(sessionId).emit("code-update", {
+  socket.on("code-sync-response", ({ roomId, code }) => {
+    // Send current code snapshot back to the room
+    socket.to(roomId).emit("code-update", {
       code,
       synced: true,
     });
