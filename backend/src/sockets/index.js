@@ -4,14 +4,14 @@ import { env } from "../config/env.js";
 import { registerCodeEvents } from "./code.socket.js";
 import { registerWhiteboardEvents } from "./whiteboard.socket.js";
 import { registerWebRTCEvents } from "./webrtc.socket.js";
+import { registerPresenceEvents, trackJoin, trackDisconnect } from "./presence.socket.js";
 
 /**
  * Initialise Socket.IO on the existing HTTP server.
  *
  * All realtime features use the backend's room system (roomId).
  * Feature handlers are registered as modular plugins — add new
- * files (e.g. chat.socket.js, presence.socket.js) and register
- * them here.
+ * files (e.g. chat.socket.js) and register them here.
  *
  * @param {import("http").Server} server
  * @returns {import("socket.io").Server}
@@ -52,10 +52,8 @@ export const initSocket = (server) => {
     socket.on("join-room", ({ roomId }) => {
       socket.join(roomId);
 
-      // Notify others in the room
-      socket.to(roomId).emit("user-joined", {
-        userId: socket.user.userId,
-      });
+      // Track presence — broadcasts updated user list
+      trackJoin(io, socket, roomId);
 
       console.log(`🏠 User ${socket.user.userId} joined room ${roomId}`);
     });
@@ -64,9 +62,11 @@ export const initSocket = (server) => {
     registerCodeEvents(io, socket);
     registerWhiteboardEvents(io, socket);
     registerWebRTCEvents(io, socket);
+    registerPresenceEvents(io, socket);
 
     // ── Disconnect ────────────────────────────────────────
     socket.on("disconnect", () => {
+      trackDisconnect(io, socket);
       console.log(`🔌 Socket disconnected: ${socket.id}`);
     });
   });

@@ -365,6 +365,12 @@
 
 .rs-participant:hover { background: #21262D; }
 
+/* Avatar with online dot */
+.rs-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
 .rs-avatar {
   width: 32px;
   height: 32px;
@@ -378,8 +384,28 @@
   flex-shrink: 0;
 }
 
-.rs-participant-name {
+.rs-online-dot {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #3FB950;
+  border: 2px solid #161B22;
+  box-shadow: 0 0 4px rgba(63, 185, 80, 0.4);
+}
+
+/* Name + typing row */
+.rs-participant-info {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rs-participant-name {
   font-size: 13px;
   font-weight: 500;
   color: #E6EDF3;
@@ -397,6 +423,37 @@
 .rs-admin-tag {
   color: #58A6FF;
   font-weight: 600;
+}
+
+/* ── Typing indicator ────────────────────────────────── */
+.rs-typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.rs-typing-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #58A6FF;
+  animation: rs-typing-bounce 1.2s ease-in-out infinite;
+}
+
+.rs-typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.rs-typing-dot:nth-child(3) { animation-delay: 0.3s;  }
+
+@keyframes rs-typing-bounce {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30%           { opacity: 1;   transform: translateY(-2px); }
+}
+
+.rs-typing-label {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: #58A6FF;
+  margin-left: 2px;
+  letter-spacing: 0.02em;
 }
 
 .rs-no-participants {

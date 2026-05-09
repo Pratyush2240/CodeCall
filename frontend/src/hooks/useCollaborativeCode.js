@@ -11,9 +11,10 @@ import { useEffect, useRef, useState, useCallback } from "react";
  *
  * @param {import("socket.io-client").Socket | null} socket
  * @param {string} roomId
+ * @param {{ onLocalChange?: () => void }} options
  * @returns {{ code, handleEditorChange }}
  */
-export function useCollaborativeCode(socket, roomId) {
+export function useCollaborativeCode(socket, roomId, { onLocalChange } = {}) {
   const [code, setCode] = useState("// Start coding here…\n");
   const isRemoteUpdate = useRef(false);
 
@@ -45,8 +46,11 @@ export function useCollaborativeCode(socket, roomId) {
       if (socket?.connected && roomId) {
         socket.emit("code-change", { roomId, code: newValue });
       }
+
+      // Notify caller about local edits (used for typing indicators)
+      onLocalChange?.();
     },
-    [socket, roomId]
+    [socket, roomId, onLocalChange]
   );
 
   return { code, handleEditorChange };
