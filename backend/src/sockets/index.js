@@ -5,6 +5,7 @@ import { registerCodeEvents } from "./code.socket.js";
 import { registerWhiteboardEvents } from "./whiteboard.socket.js";
 import { registerWebRTCEvents } from "./webrtc.socket.js";
 import { registerPresenceEvents, trackJoin, trackDisconnect } from "./presence.socket.js";
+import { registerChatEvents } from "./chat.socket.js";
 
 /**
  * Initialise Socket.IO on the existing HTTP server.
@@ -63,6 +64,7 @@ export const initSocket = (server) => {
     registerWhiteboardEvents(io, socket);
     registerWebRTCEvents(io, socket);
     registerPresenceEvents(io, socket);
+    registerChatEvents(io, socket);
 
     // ── Disconnect ────────────────────────────────────────
     socket.on("disconnect", () => {
