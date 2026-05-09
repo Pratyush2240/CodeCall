@@ -818,3 +818,133 @@
   opacity: 0.35;
   cursor: not-allowed;
 }
+
+/* ════════════════════════════════════
+   Call button (header)
+   ════════════════════════════════════ */
+.rs-call-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: rgba(63, 185, 80, 0.12);
+  border: 1px solid rgba(63, 185, 80, 0.35);
+  color: #3FB950;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.rs-call-btn:hover {
+  background: rgba(63, 185, 80, 0.22);
+  border-color: #3FB950;
+}
+
+.rs-call-btn--active {
+  background: rgba(248, 81, 73, 0.12);
+  border-color: rgba(248, 81, 73, 0.35);
+  color: #F85149;
+}
+
+.rs-call-btn--active:hover {
+  background: rgba(248, 81, 73, 0.22);
+  border-color: #F85149;
+}
+
+/* ════════════════════════════════════
+   Video bar
+   ════════════════════════════════════ */
+.rs-video-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #0D1117;
+  border-bottom: 1px solid #30363D;
+  flex-shrink: 0;
+}
+
+.rs-video-streams {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  overflow-x: auto;
+}
+
+.rs-video-tile {
+  position: relative;
+  width: 120px;
+  height: 90px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #161B22;
+  border: 1px solid #30363D;
+  flex-shrink: 0;
+}
+
+.rs-video-tile video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rs-video-label {
+  position: absolute;
+  bottom: 4px;
+  left: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* Video controls */
+.rs-video-controls {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.rs-vc-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid #30363D;
+  background: #21262D;
+  color: #E6EDF3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.rs-vc-btn:hover {
+  background: #2D3139;
+  border-color: #8B949E;
+}
+
+.rs-vc-btn--off {
+  background: rgba(248, 81, 73, 0.15);
+  border-color: rgba(248, 81, 73, 0.35);
+  color: #F85149;
+}
+
+.rs-vc-btn--off:hover {
+  background: rgba(248, 81, 73, 0.25);
+}
+
+.rs-vc-btn--hangup {
+  background: #F85149;
+  border-color: #F85149;
+  color: #fff;
+}
+
+.rs-vc-btn--hangup:hover {
+  background: #DA3633;
+}

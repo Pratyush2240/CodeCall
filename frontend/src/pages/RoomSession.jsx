@@ -5,6 +5,7 @@ import { useSocket } from '../hooks/useSocket';
 import { usePresence } from '../hooks/usePresence';
 import { useCollaborativeCode } from '../hooks/useCollaborativeCode';
 import { useChat } from '../hooks/useChat';
+import { useWebRTC } from '../hooks/useWebRTC';
 import CodeEditor from '../components/CodeEditor';
 import './RoomSession.css';
 
@@ -74,6 +75,74 @@ const SendIcon = () => (
   </svg>
 );
 
+const MicIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+    <path d="M19 10v2a7 7 0 01-14 0v-2" />
+    <line x1="12" y1="19" x2="12" y2="23" />
+    <line x1="8" y1="23" x2="16" y2="23" />
+  </svg>
+);
+
+const MicOffIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="1" y1="1" x2="23" y2="23" />
+    <path d="M9 9v3a3 3 0 005.12 2.12M15 9.34V4a3 3 0 00-5.94-.6" />
+    <path d="M17 16.95A7 7 0 015 12v-2m14 0v2c0 .87-.16 1.71-.46 2.49" />
+    <line x1="12" y1="19" x2="12" y2="23" />
+    <line x1="8" y1="23" x2="16" y2="23" />
+  </svg>
+);
+
+const CamIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="23 7 16 12 23 17 23 7" />
+    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+  </svg>
+);
+
+const CamOffIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="1" y1="1" x2="23" y2="23" />
+    <path d="M21 21H3a2 2 0 01-2-2V8a2 2 0 012-2h3m3-3h6l2 3h4a2 2 0 012 2v9.34m-7.72-2.06a4 4 0 11-5.56-5.56" />
+  </svg>
+);
+
+const PhoneIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" />
+  </svg>
+);
+
+const PhoneOffIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10.68 13.31a16 16 0 003.41 2.6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.42 19.42 0 01-3.33-2.67m-2.67-3.34a19.79 19.79 0 01-3.07-8.63A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91" />
+    <line x1="23" y1="1" x2="1" y2="23" />
+  </svg>
+);
+
+/* ── VideoTile — renders a single video stream ─── */
+const VideoTile = ({ stream, muted, label }) => {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (ref.current && stream) {
+      ref.current.srcObject = stream;
+    }
+  }, [stream]);
+  return (
+    <div className="rs-video-tile">
+      <video ref={ref} autoPlay playsInline muted={muted} />
+      <span className="rs-video-label">{label}</span>
+    </div>
+  );
+};
+
 /* ── Avatar helpers ───────────────────────────────────────────── */
 const AVATAR_COLORS = ['#6366F1', '#0EA5E9', '#F59E0B', '#10B981', '#EC4899', '#8B5CF6'];
 const avatarColor   = (str = '') => AVATAR_COLORS[str.charCodeAt(0) % AVATAR_COLORS.length];
@@ -120,6 +189,18 @@ export default function RoomSessionPage() {
   const [ending, setEnding]       = useState(false);   // PATCH in-flight
   const [showConfirm, setShowConfirm] = useState(false); // confirm dialog
 
+  /* Resolve logged-in user ID from the stored JWT payload */
+  const currentUserId = (() => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return null;
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.userId ?? payload.id ?? payload.sub ?? null;
+    } catch {
+      return null;
+    }
+  })();
+
   /* ── Socket connection ── */
   const { socket, isConnected } = useSocket(roomId);
 
@@ -142,17 +223,12 @@ export default function RoomSessionPage() {
     setChatInput('');
   };
 
-  /* Resolve logged-in user ID from the stored JWT payload */
-  const currentUserId = (() => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return null;
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.userId ?? payload.id ?? payload.sub ?? null;
-    } catch {
-      return null;
-    }
-  })();
+  /* ── WebRTC voice/video ── */
+  const {
+    localStream, remoteStreams, isInCall,
+    isMicOn, isCamOn,
+    joinCall, leaveCall, toggleMic, toggleCam,
+  } = useWebRTC(socket, roomId, currentUserId);
 
   /* ── Fetch room on mount ── */
   useEffect(() => {
@@ -294,6 +370,28 @@ export default function RoomSessionPage() {
             <LeaveIcon />
             Leave Room
           </button>
+
+          {/* Join/Leave Call */}
+          {!isInCall ? (
+            <button
+              id="join-call-btn"
+              className="rs-call-btn"
+              onClick={joinCall}
+              aria-label="Join voice/video call"
+            >
+              <PhoneIcon />
+              Join Call
+            </button>
+          ) : (
+            <button
+              className="rs-call-btn rs-call-btn--active"
+              onClick={leaveCall}
+              aria-label="Leave call"
+            >
+              <PhoneOffIcon />
+              Leave Call
+            </button>
+          )}
         </div>
       </header>
 
@@ -324,6 +422,46 @@ export default function RoomSessionPage() {
                 {ending ? 'Ending…' : 'Yes, End Room'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Video bar (shown when in call) ── */}
+      {isInCall && (
+        <div className="rs-video-bar">
+          <div className="rs-video-streams">
+            <VideoTile stream={localStream} muted label="You" />
+            {Object.entries(remoteStreams).map(([userId, stream]) => (
+              <VideoTile
+                key={userId}
+                stream={stream}
+                muted={false}
+                label={`User ${userId.slice(0, 6)}`}
+              />
+            ))}
+          </div>
+          <div className="rs-video-controls">
+            <button
+              className={`rs-vc-btn ${!isMicOn ? 'rs-vc-btn--off' : ''}`}
+              onClick={toggleMic}
+              aria-label={isMicOn ? 'Mute mic' : 'Unmute mic'}
+            >
+              {isMicOn ? <MicIcon /> : <MicOffIcon />}
+            </button>
+            <button
+              className={`rs-vc-btn ${!isCamOn ? 'rs-vc-btn--off' : ''}`}
+              onClick={toggleCam}
+              aria-label={isCamOn ? 'Turn off camera' : 'Turn on camera'}
+            >
+              {isCamOn ? <CamIcon /> : <CamOffIcon />}
+            </button>
+            <button
+              className="rs-vc-btn rs-vc-btn--hangup"
+              onClick={leaveCall}
+              aria-label="Leave call"
+            >
+              <PhoneOffIcon />
+            </button>
           </div>
         </div>
       )}
