@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getRoom, endRoom } from '../api/rooms';
 import { useSocket } from '../hooks/useSocket';
+import { usePresence } from '../hooks/usePresence';
 import { useCollaborativeCode } from '../hooks/useCollaborativeCode';
 import CodeEditor from '../components/CodeEditor';
 import './RoomSession.css';
@@ -63,15 +64,28 @@ const avatarColor   = (str = '') => AVATAR_COLORS[str.charCodeAt(0) % AVATAR_COL
 const initials      = (str = '') => str.slice(0, 2).toUpperCase();
 
 /* ── ParticipantRow ───────────────────────────────────────────── */
-const ParticipantRow = ({ id, isAdmin, isSelf }) => (
+const ParticipantRow = ({ id, isAdmin, isSelf, isTyping }) => (
   <div className="rs-participant">
-    <div className="rs-avatar" style={{ background: avatarColor(id) }}>
-      {initials(id)}
+    <div className="rs-avatar-wrap">
+      <div className="rs-avatar" style={{ background: avatarColor(id) }}>
+        {initials(id)}
+      </div>
+      <span className="rs-online-dot" />
     </div>
-    <span className="rs-participant-name">
-      {isSelf ? 'You' : `User ${id.slice(0, 6)}`}
-      {isAdmin && <span className="rs-admin-tag"> (Host)</span>}
-    </span>
+    <div className="rs-participant-info">
+      <span className="rs-participant-name">
+        {isSelf ? 'You' : `User ${id.slice(0, 6)}`}
+        {isAdmin && <span className="rs-admin-tag"> (Host)</span>}
+      </span>
+      {isTyping && (
+        <span className="rs-typing-indicator" aria-label="Typing">
+          <span className="rs-typing-dot" />
+          <span className="rs-typing-dot" />
+          <span className="rs-typing-dot" />
+          <span className="rs-typing-label">editing</span>
+        </span>
+      )}
+    </div>
     {isAdmin && <span className="rs-participant-badge">Admin</span>}
   </div>
 );
@@ -90,9 +104,16 @@ export default function RoomSessionPage() {
   const [ending, setEnding]       = useState(false);   // PATCH in-flight
   const [showConfirm, setShowConfirm] = useState(false); // confirm dialog
 
-  /* ── Socket connection + collaborative code sync ── */
+  /* ── Socket connection ── */
   const { socket, isConnected } = useSocket(roomId);
-  const { code, handleEditorChange } = useCollaborativeCode(socket, roomId);
+
+  /* ── Realtime presence ── */
+  const { onlineUsers, typingUsers, emitTyping } = usePresence(socket, roomId);
+
+  /* ── Collaborative code sync (typing callback wired in) ── */
+  const { code, handleEditorChange } = useCollaborativeCode(socket, roomId, {
+    onLocalChange: emitTyping,
+  });
 
   /* Resolve logged-in user ID from the stored JWT payload */
   const currentUserId = (() => {
@@ -199,6 +220,12 @@ export default function RoomSessionPage() {
   const isAdmin      = room.createdBy === currentUserId;  // ← determines role
   const isEnded      = roomStatus === 'ended';
 
+  /* ── Live presence: prefer socket data, fall back to API ── */
+  const displayUsers = isConnected && onlineUsers.length > 0
+    ? onlineUsers.map((u) => u.userId)
+    : participants;
+  const liveCount = displayUsers.length;
+
   /* ── Main UI ── */
   return (
     <div className="rs-shell">
@@ -303,7 +330,7 @@ export default function RoomSessionPage() {
             <span className="rs-status-item">
               {isConnected ? "🟢 Connected" : "⏳ Connecting…"}
             </span>
-            <span className="rs-status-item">{participants.length} participants</span>
+            <span className="rs-status-item">{liveCount} online</span>
           </div>
         </main>
 
@@ -315,20 +342,21 @@ export default function RoomSessionPage() {
               <span className="rs-sidebar-title">Participants</span>
             </div>
             <span className="rs-online-badge">
-              {participants.length} Online
+              {liveCount} Online
             </span>
           </div>
 
           <p className="rs-sidebar-sub">Collaborating in {roomName}</p>
 
           <div className="rs-participants-list">
-            {participants.length > 0
-              ? participants.map((p) => (
+            {displayUsers.length > 0
+              ? displayUsers.map((p) => (
                   <ParticipantRow
                     key={p}
                     id={p}
                     isAdmin={p === room.createdBy}
                     isSelf={p === currentUserId}
+                    isTyping={typingUsers.has(p)}
                   />
                 ))
               : (
