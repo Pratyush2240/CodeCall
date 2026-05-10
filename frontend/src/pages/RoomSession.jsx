@@ -6,7 +6,9 @@ import { usePresence } from '../hooks/usePresence';
 import { useCollaborativeCode } from '../hooks/useCollaborativeCode';
 import { useChat } from '../hooks/useChat';
 import { useWebRTC } from '../hooks/useWebRTC';
+import { useWhiteboard } from '../hooks/useWhiteboard';
 import CodeEditor from '../components/CodeEditor';
+import DSACanvas from '../components/DSACanvas';
 import './RoomSession.css';
 
 /* ── Icons ────────────────────────────────────────────────────── */
@@ -59,6 +61,50 @@ const CodeEditorIcon = () => (
     <polyline points="8 6 2 12 8 18" />
   </svg>
 );
+
+const DSAIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="6" cy="6" r="3" />
+    <circle cx="18" cy="6" r="3" />
+    <circle cx="12" cy="18" r="3" />
+    <line x1="8.5" y1="7.5" x2="10" y2="16" />
+    <line x1="15.5" y1="7.5" x2="14" y2="16" />
+  </svg>
+);
+
+const WhiteboardIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M3 9h18" />
+  </svg>
+);
+
+const PencilIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+  </svg>
+);
+
+const EraserIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 20H7L3 16c-.8-.8-.8-2 0-2.8L14.6 1.6c.8-.8 2-.8 2.8 0l4 4c.8.8.8 2 0 2.8L10 20" />
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+  </svg>
+);
+
+const WB_COLORS = ['#E6EDF3','#F85149','#3FB950','#58A6FF','#F59E0B','#EC4899','#8B5CF6','#0EA5E9'];
 
 const ChatIcon = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -229,6 +275,18 @@ export default function RoomSessionPage() {
     isMicOn, isCamOn,
     joinCall, leaveCall, toggleMic, toggleCam,
   } = useWebRTC(socket, roomId, currentUserId);
+
+  /* ── Whiteboard ── */
+  const {
+    initCanvas, resizeCanvas,
+    onPointerDown, onPointerMove, onPointerUp,
+    clearBoard,
+    tool: wbTool, setTool: setWbTool,
+    brushSize: wbSize, setBrushSize: setWbSize,
+    color: wbColor, setColor: setWbColor,
+  } = useWhiteboard(socket, roomId);
+
+  const [activeTab, setActiveTab] = useState('editor'); // 'editor' | 'whiteboard'
 
   /* ── Fetch room on mount ── */
   useEffect(() => {
@@ -469,22 +527,125 @@ export default function RoomSessionPage() {
       {/* ── Body ── */}
       <div className="rs-body">
 
-        {/* ── Editor pane ── */}
+        {/* ── Editor / Whiteboard pane ── */}
         <main className="rs-editor-pane">
-          {/* Empty tab bar — no hardcoded filenames */}
+          {/* Tab bar — Editor | Whiteboard */}
           <div className="rs-tab-bar">
-            <div className="rs-tab rs-tab--active">
+            <div
+              className={`rs-tab ${activeTab === 'editor' ? 'rs-tab--active' : ''}`}
+              onClick={() => setActiveTab('editor')}
+            >
               <CodeEditorIcon />
               Editor
+            </div>
+            <div
+              className={`rs-tab ${activeTab === 'whiteboard' ? 'rs-tab--active' : ''}`}
+              onClick={() => { setActiveTab('whiteboard'); setTimeout(resizeCanvas, 50); }}
+            >
+              <WhiteboardIcon />
+              Whiteboard
+            </div>
+            <div
+              className={`rs-tab ${activeTab === 'dsa' ? 'rs-tab--active' : ''}`}
+              onClick={() => setActiveTab('dsa')}
+            >
+              <DSAIcon />
+              DSA Board
             </div>
           </div>
 
           {/* Code editor — live collaborative */}
-          <CodeEditor
-            value={code}
-            onChange={handleEditorChange}
-            isConnected={isConnected}
-          />
+          {activeTab === 'editor' && (
+            <CodeEditor
+              value={code}
+              onChange={handleEditorChange}
+              isConnected={isConnected}
+            />
+          )}
+
+          {/* Whiteboard canvas */}
+          {activeTab === 'whiteboard' && (
+            <div className="rs-wb-container">
+              {/* Toolbar */}
+              <div className="rs-wb-toolbar">
+                <button
+                  className={`rs-wb-tool ${wbTool === 'pencil' ? 'rs-wb-tool--active' : ''}`}
+                  onClick={() => setWbTool('pencil')}
+                  aria-label="Pencil"
+                  title="Pencil"
+                >
+                  <PencilIcon />
+                </button>
+                <button
+                  className={`rs-wb-tool ${wbTool === 'eraser' ? 'rs-wb-tool--active' : ''}`}
+                  onClick={() => setWbTool('eraser')}
+                  aria-label="Eraser"
+                  title="Eraser"
+                >
+                  <EraserIcon />
+                </button>
+
+                <span className="rs-wb-divider" />
+
+                {/* Color swatches */}
+                <div className="rs-wb-colors">
+                  {WB_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      className={`rs-wb-swatch ${wbColor === c ? 'rs-wb-swatch--active' : ''}`}
+                      style={{ background: c }}
+                      onClick={() => setWbColor(c)}
+                      aria-label={`Color ${c}`}
+                    />
+                  ))}
+                </div>
+
+                <span className="rs-wb-divider" />
+
+                {/* Brush size */}
+                <label className="rs-wb-size-label" title="Brush size">
+                  <span>{wbSize}px</span>
+                  <input
+                    type="range"
+                    min="1"
+                    max="20"
+                    value={wbSize}
+                    onChange={(e) => setWbSize(Number(e.target.value))}
+                    className="rs-wb-size-slider"
+                  />
+                </label>
+
+                <span className="rs-wb-divider" />
+
+                <button
+                  className="rs-wb-tool rs-wb-tool--danger"
+                  onClick={clearBoard}
+                  aria-label="Clear board"
+                  title="Clear board"
+                >
+                  <TrashIcon />
+                </button>
+              </div>
+
+              {/* Canvas */}
+              <div className="rs-wb-canvas-wrap">
+                <canvas
+                  ref={(el) => { if (el) initCanvas(el); }}
+                  className="rs-wb-canvas"
+                  onPointerDown={onPointerDown}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={onPointerUp}
+                  onPointerLeave={onPointerUp}
+                  style={{ cursor: wbTool === 'eraser' ? 'cell' : 'crosshair' }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* DSA Visualization board */}
+          {activeTab === 'dsa' && (
+            <DSACanvas socket={socket} roomId={roomId} />
+          )}
 
           {/* Status bar — dynamic values only */}
           <div className="rs-status-bar" aria-label="Session status">
