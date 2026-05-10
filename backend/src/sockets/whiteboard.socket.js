@@ -12,4 +12,12 @@ export const registerWhiteboardEvents = (io, socket) => {
     // Clear whiteboard for all users in the room
     io.to(roomId).emit("whiteboard-clear");
   });
+
+  // DSA structured visualization sync
+  socket.on("whiteboard-dsa-sync", ({ roomId, objects }) => {
+    socket.to(roomId).emit("whiteboard-dsa-sync", {
+      objects,
+      userId: socket.user.userId,
+    });
+  });
 };
