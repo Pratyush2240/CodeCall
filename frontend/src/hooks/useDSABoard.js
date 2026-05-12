@@ -47,6 +47,16 @@ export function useDSABoard(socket, roomId) {
     socket.emit("whiteboard-dsa-sync", { roomId, objects: next });
   }, [socket, roomId]);
 
+  // Throttled sync for drag moves (50ms) to avoid socket flooding
+  const moveTimer = useRef(null);
+  const syncThrottled = useCallback((next) => {
+    if (moveTimer.current) return;
+    moveTimer.current = setTimeout(() => {
+      sync(next);
+      moveTimer.current = null;
+    }, 50);
+  }, [sync]);
+
   /* ── CRUD ────────────────────────────────────────────────── */
   const addObject = useCallback((type, x, y) => {
     setObjects((prev) => {
@@ -72,10 +82,10 @@ export function useDSABoard(socket, roomId) {
   const moveObject = useCallback((id, x, y) => {
     setObjects((prev) => {
       const next = prev.map((o) => (o.id === id ? { ...o, x, y } : o));
-      sync(next);
+      syncThrottled(next);
       return next;
     });
-  }, [sync]);
+  }, [syncThrottled]);
 
   const updateObjectData = useCallback((id, dataUpdater) => {
     setObjects((prev) => {
