@@ -7,7 +7,7 @@ import "./CodeEditor.css";
  * Receives `value` and `onChange` from the parent (RoomSession)
  * so all sync logic stays in the hook layer.
  */
-export default function CodeEditor({ value, onChange, isConnected }) {
+export default function CodeEditor({ value, onChange, isConnected, language = "javascript" }) {
   return (
     <div className="ce-wrapper">
       {/* Connection indicator */}
@@ -20,7 +20,7 @@ export default function CodeEditor({ value, onChange, isConnected }) {
 
       <Editor
         height="100%"
-        defaultLanguage="javascript"
+        language={language}
         theme="vs-dark"
         value={value}
         onChange={onChange}
