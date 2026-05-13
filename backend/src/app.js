@@ -9,6 +9,7 @@ import sessionRoutes from "./modules/session/session.routes.js";
 import roomRoutes from "./modules/room/room.routes.js";
 import healthRoutes from "./modules/health/health.routes.js";
 import metricsRoutes from "./modules/metrics/metrics.routes.js";
+import executionRoutes from "./modules/execution/execution.routes.js";
 
 import errorHandler from "./middlewares/error.middleware.js";
 import correlationMiddleware from "./middlewares/correlation.middleware.js";
@@ -73,6 +74,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/friends", friendRoutes);
 app.use("/api/sessions", sessionRoutes);
 app.use("/api/rooms", roomRoutes);
+app.use("/api/execute", executionRoutes);
 
 app.use("/api/health", healthRoutes);
 app.use("/api/metrics", metricsRoutes);

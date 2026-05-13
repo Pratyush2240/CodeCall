@@ -7,6 +7,7 @@ import { useCollaborativeCode } from '../hooks/useCollaborativeCode';
 import { useChat } from '../hooks/useChat';
 import { useWebRTC } from '../hooks/useWebRTC';
 import { useWhiteboard } from '../hooks/useWhiteboard';
+import { useCodeExecution } from '../hooks/useCodeExecution';
 import CodeEditor from '../components/CodeEditor';
 import DSACanvas from '../components/DSACanvas';
 import './RoomSession.css';
@@ -278,13 +279,28 @@ export default function RoomSessionPage() {
 
   /* ── Whiteboard ── */
   const {
-    initCanvas, resizeCanvas,
-    onPointerDown, onPointerMove, onPointerUp,
+    objects: wbObjects,
+    setObjects: setWbObjects,
     clearBoard,
+    initCanvas,
+    onPointerDown,
+    onPointerMove,
+    onPointerUp,
+    resizeCanvas,
     tool: wbTool, setTool: setWbTool,
     brushSize: wbSize, setBrushSize: setWbSize,
     color: wbColor, setColor: setWbColor,
   } = useWhiteboard(socket, roomId);
+
+  // ── Code Execution ──
+  const {
+    language,
+    setLanguage,
+    output,
+    isRunning,
+    runCode,
+    clearOutput
+  } = useCodeExecution(socket, roomId, code);
 
   const [activeTab, setActiveTab] = useState('editor'); // 'editor' | 'whiteboard'
 
@@ -556,11 +572,45 @@ export default function RoomSessionPage() {
 
           {/* Code editor — live collaborative */}
           {activeTab === 'editor' && (
-            <CodeEditor
-              value={code}
-              onChange={handleEditorChange}
-              isConnected={isConnected}
-            />
+            <div className="rs-editor-layout">
+              <div className="rs-editor-toolbar">
+                <select 
+                  className="rs-lang-select" 
+                  value={language} 
+                  onChange={(e) => setLanguage(e.target.value)}
+                  disabled={isRunning}
+                >
+                  <option value="javascript">JavaScript</option>
+                  <option value="python">Python</option>
+                  <option value="java">Java</option>
+                  <option value="cpp">C++</option>
+                </select>
+                <button 
+                  className="rs-run-btn" 
+                  onClick={runCode} 
+                  disabled={isRunning}
+                >
+                  {isRunning ? "⏳ Running..." : "▶ Run Code"}
+                </button>
+              </div>
+              <div className="rs-editor-wrap">
+                <CodeEditor
+                  value={code}
+                  language={language}
+                  onChange={handleEditorChange}
+                  isConnected={isConnected}
+                />
+              </div>
+              <div className="rs-terminal">
+                <div className="rs-terminal-header">
+                  <span className="rs-terminal-title">Terminal Output</span>
+                  <button className="rs-terminal-clear" onClick={clearOutput}>Clear</button>
+                </div>
+                <div className="rs-terminal-body">
+                  <pre className="rs-terminal-output">{output || "Run code to see output..."}</pre>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Whiteboard canvas */}
