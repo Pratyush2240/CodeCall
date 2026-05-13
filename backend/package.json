@@ -10,6 +10,7 @@
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "@sentry/node": "^10.43.0",
+    "axios": "^1.16.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.71.0",
     "cors": "^2.8.5",
