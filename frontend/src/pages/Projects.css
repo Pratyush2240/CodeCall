@@ -54,6 +54,7 @@
   cursor: pointer;
   box-shadow: var(--shadow-btn);
   transition: background 0.2s ease, transform 0.1s ease;
+  white-space: nowrap;
 }
 
 .btn-new-project:hover {
@@ -61,29 +62,85 @@
   transform: translateY(-1px);
 }
 
-/* Grid Layout matching screenshot */
-.projects-grid {
-  display: flex;
-  flex-direction: column;
+/* Dynamic grid */
+.projects-grid-dynamic {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 24px;
   margin-bottom: 40px;
 }
 
-.project-grid-large {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
+/* Loading / error / empty states */
+.projects-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 0;
+  color: var(--color-text-secondary);
+  font-size: 14px;
 }
 
-.project-grid-standard {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
+.projects-state--error {
+  color: #EF4444;
+  flex-direction: column;
+  gap: 16px;
 }
 
-@media (max-width: 1024px) {
-  .project-grid-large,
-  .project-grid-standard {
+.projects-retry {
+  padding: 6px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.projects-retry:hover {
+  background: var(--color-input-bg);
+}
+
+.projects-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 80px 0;
+  text-align: center;
+}
+
+.projects-empty-icon {
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-input-bg);
+  border-radius: 50%;
+  margin-bottom: 8px;
+}
+
+.projects-empty-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.projects-empty-sub {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
+}
+
+@media (max-width: 768px) {
+  .projects-main {
+    padding: 24px 16px;
+  }
+
+  .projects-grid-dynamic {
     grid-template-columns: 1fr;
   }
 }
