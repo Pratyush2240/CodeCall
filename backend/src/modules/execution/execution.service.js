@@ -13,6 +13,18 @@ const LANG_MAP = {
 const SUPPORTED_LANGS = Object.keys(LANG_MAP);
 
 /**
+ * For Java: Judge0 always runs `java Main`, so the public/default
+ * class MUST be named `Main`. This helper auto-renames it.
+ */
+function normalizeJavaSource(code) {
+  // Replace `class <AnyName>` with `class Main` (handles public class too)
+  return code.replace(
+    /\b(public\s+)?class\s+\w+/,
+    (match) => match.replace(/class\s+\w+/, "class Main")
+  );
+}
+
+/**
  * Submit code to Judge0 and poll until completion.
  * Returns { stdout, stderr, compile_output, status, time, memory }.
  */
@@ -21,11 +33,17 @@ async function executeCode(source_code, language, stdin = "") {
     throw new Error(`Unsupported language: ${language}. Supported: ${SUPPORTED_LANGS.join(", ")}`);
   }
 
+  // Auto-fix Java class name
+  let finalCode = source_code;
+  if (language === "java") {
+    finalCode = normalizeJavaSource(source_code);
+  }
+
   // 1. Submit
   const { data: submission } = await axios.post(
     `${JUDGE0_URL}/submissions?base64_encoded=false&wait=false`,
     {
-      source_code,
+      source_code: finalCode,
       language_id: LANG_MAP[language],
       stdin,
     },
