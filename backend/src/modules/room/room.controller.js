@@ -2,12 +2,13 @@ import { getRoomsForUser, createRoomForUser, joinRoomByCode, getRoomById, endRoo
 import AppError from '../../utils/appError.js';
 
 /**
- * GET /api/rooms
+ * GET /api/rooms?projectId=xxx
  * Returns all rooms the authenticated user belongs to.
+ * Optionally filter by projectId.
  */
 export async function listRooms(req, res, next) {
   try {
-    const rooms = getRoomsForUser(req.user.id);
+    const rooms = await getRoomsForUser(req.user.id, req.query.projectId || null);
     res.json(rooms);
   } catch (err) {
     next(err);
@@ -16,11 +17,12 @@ export async function listRooms(req, res, next) {
 
 /**
  * POST /api/rooms
- * Creates a new room and adds the current user as the first participant.
+ * Creates a new room. Optionally links to a project.
+ * Body: { projectId?: string }
  */
 export async function createRoom(req, res, next) {
   try {
-    const room = createRoomForUser(req.user.id);
+    const room = await createRoomForUser(req.user.id, req.body.projectId || null);
     res.status(201).json(room);
   } catch (err) {
     next(err);
@@ -38,7 +40,7 @@ export async function joinRoom(req, res, next) {
     if (!code || typeof code !== 'string' || !code.trim()) {
       return next(new AppError('Room code is required.', 400));
     }
-    const room = joinRoomByCode(code.trim().toUpperCase(), req.user.id);
+    const room = await joinRoomByCode(code.trim().toUpperCase(), req.user.id);
     res.json(room);
   } catch (err) {
     next(err);
@@ -51,7 +53,7 @@ export async function joinRoom(req, res, next) {
  */
 export async function getRoom(req, res, next) {
   try {
-    const room = getRoomById(req.params.roomId, req.user.id);
+    const room = await getRoomById(req.params.roomId, req.user.id);
     res.json(room);
   } catch (err) {
     next(err);
@@ -64,7 +66,7 @@ export async function getRoom(req, res, next) {
  */
 export async function endRoomHandler(req, res, next) {
   try {
-    const room = endRoom(req.params.roomId, req.user.id);
+    const room = await endRoom(req.params.roomId, req.user.id);
     res.json(room);
   } catch (err) {
     next(err);

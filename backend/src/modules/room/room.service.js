@@ -1,8 +1,5 @@
-import { randomUUID } from 'crypto';
-import AppError from '../../utils/appError.js';
-
-/* ─── In-memory store (swap for a real DB layer later) ─────────────────── */
-const roomStore = new Map();
+import prisma from "../../config/prisma.js";
+import AppError from "../../utils/appError.js";
 
 /**
  * Generate a short, human-readable invite code.
@@ -10,92 +7,215 @@ const roomStore = new Map();
  */
 const generateCode = () =>
   Math.random().toString(36).slice(2, 5).toUpperCase() +
-  '-' +
+  "-" +
   Math.random().toString(36).slice(2, 5).toUpperCase();
 
 /* ─── Service Functions ─────────────────────────────────────────────────── */
 
 /**
- * Returns all rooms the given user is a participant of.
- * @param {string} userId
- * @returns {Array}
+ * Returns all rooms the given user participates in.
  */
-export function getRoomsForUser(userId) {
-  return [...roomStore.values()].filter(room =>
-    room.participants.includes(userId)
-  );
+export async function getRoomsForUser(userId, projectId = null) {
+  const where = {
+    participants: { some: { userId } },
+  };
+  if (projectId) where.projectId = projectId;
+
+  const rooms = await prisma.room.findMany({
+    where,
+    include: {
+      createdBy: { select: { id: true, username: true } },
+      _count: { select: { participants: true } },
+    },
+    orderBy: { lastActivity: "desc" },
+  });
+
+  return rooms.map((r) => ({
+    id: r.id,
+    name: r.name,
+    code: r.code,
+    status: r.status,
+    createdBy: r.createdById,
+    createdByName: r.createdBy.username,
+    participants: r._count.participants,
+    projectId: r.projectId,
+    lastUpdated: r.updatedAt.toISOString(),
+    lastActivity: r.lastActivity.toISOString(),
+    createdAt: r.createdAt.toISOString(),
+    endedAt: r.endedAt?.toISOString() || null,
+  }));
 }
 
 /**
  * Creates a new room owned by the given user.
- * @param {string} userId
- * @returns {Object}
  */
-export function createRoomForUser(userId) {
-  const id = randomUUID();
-  const room = {
+export async function createRoomForUser(userId, projectId = null) {
+  const id = crypto.randomUUID();
+  const code = generateCode();
+
+  const data = {
     id,
-    name:         `room-${id.slice(0, 6)}`,
-    code:         generateCode(),
-    status:       'active',
-    createdBy:    userId,          // ← admin / host
-    participants: [userId],
-    lastUpdated:  new Date().toISOString(),
-    createdAt:    new Date().toISOString(),
+    name: `room-${id.slice(0, 6)}`,
+    code,
+    status: "ACTIVE",
+    createdById: userId,
+    participants: {
+      create: { userId },
+    },
   };
-  roomStore.set(id, room);
-  return room;
+
+  if (projectId) {
+    // Verify project exists
+    const project = await prisma.project.findUnique({ where: { id: projectId } });
+    if (!project) throw new AppError("Project not found.", 404);
+    data.projectId = projectId;
+  }
+
+  const room = await prisma.room.create({
+    data,
+    include: {
+      createdBy: { select: { id: true, username: true } },
+      _count: { select: { participants: true } },
+    },
+  });
+
+  return {
+    id: room.id,
+    name: room.name,
+    code: room.code,
+    status: room.status,
+    createdBy: room.createdById,
+    createdByName: room.createdBy.username,
+    participants: [userId],
+    projectId: room.projectId,
+    lastUpdated: room.updatedAt.toISOString(),
+    lastActivity: room.lastActivity.toISOString(),
+    createdAt: room.createdAt.toISOString(),
+  };
 }
 
 /**
  * Joins an existing room by invite code.
- * @param {string} code
- * @param {string} userId
- * @returns {Object}
  */
-export function joinRoomByCode(code, userId) {
-  const room = [...roomStore.values()].find(r => r.code === code);
-  if (!room) throw new AppError('Room not found. Check the code and try again.', 404);
-  if (!room.participants.includes(userId)) {
-    room.participants.push(userId);
-    room.lastUpdated = new Date().toISOString();
+export async function joinRoomByCode(code, userId) {
+  const room = await prisma.room.findUnique({
+    where: { code },
+    include: {
+      participants: { select: { userId: true } },
+    },
+  });
+
+  if (!room) throw new AppError("Room not found. Check the code and try again.", 404);
+  if (room.status === "ENDED") throw new AppError("This room has ended.", 410);
+
+  // Upsert participant
+  const isAlready = room.participants.some((p) => p.userId === userId);
+  if (!isAlready) {
+    await prisma.roomParticipant.create({
+      data: { userId, roomId: room.id },
+    });
   }
-  return room;
+
+  // Touch activity
+  const updated = await prisma.room.update({
+    where: { id: room.id },
+    data: { lastActivity: new Date() },
+    include: {
+      createdBy: { select: { id: true, username: true } },
+      participants: { select: { userId: true } },
+    },
+  });
+
+  return {
+    id: updated.id,
+    name: updated.name,
+    code: updated.code,
+    status: updated.status,
+    createdBy: updated.createdById,
+    participants: updated.participants.map((p) => p.userId),
+    projectId: updated.projectId,
+    lastUpdated: updated.updatedAt.toISOString(),
+    lastActivity: updated.lastActivity.toISOString(),
+    createdAt: updated.createdAt.toISOString(),
+  };
 }
 
 /**
- * Returns a single room by ID.
- * @param {string} id
- * @param {string} userId  — must be a participant
- * @returns {Object}
+ * Returns a single room by ID. User must be a participant.
  */
-export function getRoomById(id, userId) {
-  const room = roomStore.get(id);
-  if (!room) throw new AppError('Room not found.', 404);
-  if (!room.participants.includes(userId)) {
-    throw new AppError('You are not a participant of this room.', 403);
+export async function getRoomById(id, userId) {
+  const room = await prisma.room.findUnique({
+    where: { id },
+    include: {
+      createdBy: { select: { id: true, username: true } },
+      participants: { select: { userId: true } },
+    },
+  });
+
+  if (!room) throw new AppError("Room not found.", 404);
+
+  const isParticipant = room.participants.some((p) => p.userId === userId);
+  if (!isParticipant) {
+    throw new AppError("You are not a participant of this room.", 403);
   }
-  return room;
+
+  return {
+    id: room.id,
+    name: room.name,
+    code: room.code,
+    status: room.status,
+    createdBy: room.createdById,
+    createdByName: room.createdBy.username,
+    participants: room.participants.map((p) => p.userId),
+    projectId: room.projectId,
+    lastUpdated: room.updatedAt.toISOString(),
+    lastActivity: room.lastActivity.toISOString(),
+    createdAt: room.createdAt.toISOString(),
+    endedAt: room.endedAt?.toISOString() || null,
+  };
 }
 
 /**
- * Ends a room. Only the room admin (createdBy) can do this.
- * Sets status to 'ended' and clears participants.
- * @param {string} id
- * @param {string} userId
- * @returns {Object}
+ * Ends a room. Only the room creator can do this.
  */
-export function endRoom(id, userId) {
-  const room = roomStore.get(id);
-  if (!room) throw new AppError('Room not found.', 404);
-  if (room.createdBy !== userId) {
-    throw new AppError('Only the room admin can end this room.', 403);
+export async function endRoom(id, userId) {
+  const room = await prisma.room.findUnique({ where: { id } });
+  if (!room) throw new AppError("Room not found.", 404);
+  if (room.createdById !== userId) {
+    throw new AppError("Only the room admin can end this room.", 403);
   }
-  if (room.status === 'ended') {
-    throw new AppError('Room has already been ended.', 409);
+  if (room.status === "ENDED") {
+    throw new AppError("Room has already been ended.", 409);
   }
-  room.status      = 'ended';
-  room.endedAt     = new Date().toISOString();
-  room.lastUpdated = new Date().toISOString();
-  return room;
+
+  const updated = await prisma.room.update({
+    where: { id },
+    data: {
+      status: "ENDED",
+      endedAt: new Date(),
+      lastActivity: new Date(),
+    },
+  });
+
+  return {
+    id: updated.id,
+    name: updated.name,
+    status: updated.status,
+    endedAt: updated.endedAt.toISOString(),
+    lastUpdated: updated.updatedAt.toISOString(),
+  };
+}
+
+/**
+ * Updates lastActivity timestamp. Called from socket events.
+ */
+export async function touchRoom(roomId) {
+  try {
+    await prisma.room.update({
+      where: { id: roomId },
+      data: { lastActivity: new Date() },
+    });
+  } catch {
+    // Room may not exist in DB yet — silently ignore
+  }
 }
