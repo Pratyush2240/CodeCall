@@ -1,23 +1,20 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { executeCode } from "../api/execution";
 
 export function useCodeExecution(socket, roomId, code) {
   const [language, setLanguage] = useState("javascript");
   const [output, setOutput] = useState("");
   const [isRunning, setIsRunning] = useState(false);
+  const stdinRef = useRef("");
 
-  // Sync execution status and output from other users
   useEffect(() => {
     if (!socket) return;
-    
-    const onOutput = ({ output: newOutput }) => setOutput(newOutput);
+    const onOutput = ({ output: o }) => setOutput(o);
     const onClear = () => setOutput("");
-    const onStatus = ({ isRunning: remoteRunning }) => setIsRunning(remoteRunning);
-
+    const onStatus = ({ isRunning: r }) => setIsRunning(r);
     socket.on("execution-output", onOutput);
     socket.on("execution-clear", onClear);
     socket.on("execution-status", onStatus);
-
     return () => {
       socket.off("execution-output", onOutput);
       socket.off("execution-clear", onClear);
@@ -32,10 +29,10 @@ export function useCodeExecution(socket, roomId, code) {
     }
   }, [socket, roomId]);
 
-  const syncOutput = useCallback((newOutput, isError = false) => {
-    setOutput(newOutput);
+  const syncOutput = useCallback((text) => {
+    setOutput(text);
     if (socket?.connected && roomId) {
-      socket.emit("execution-output", { roomId, output: newOutput, isError });
+      socket.emit("execution-output", { roomId, output: text });
     }
   }, [socket, roomId]);
 
@@ -48,46 +45,26 @@ export function useCodeExecution(socket, roomId, code) {
 
   const runCode = useCallback(async () => {
     if (!code || isRunning) return;
-    
+
     setStatus(true);
-    syncOutput("Executing...\n");
+    const stdin = stdinRef.current || "";
+    syncOutput("$ Executing...\n");
 
     try {
-      const result = await executeCode(code, language);
-      
-      let finalOutput = "";
-      if (result.compile_output) {
-        finalOutput += `[Compiler]:\n${result.compile_output}\n`;
-      }
-      
-      if (result.error) {
-        finalOutput += `[Error]:\n${result.error}\n`;
-      }
-      
-      if (result.output) {
-        finalOutput += `${result.output}`;
-      } else if (!result.error && !result.compile_output) {
-        finalOutput += `Execution completed successfully with no output.\n`;
-      }
-      
-      if (result.time || result.memory) {
-         finalOutput += `\n\n--- Execution Details ---\nTime: ${result.time}s\nMemory: ${result.memory}KB`;
-      }
-
-      syncOutput(finalOutput, !!result.error);
+      const result = await executeCode(code, language, stdin);
+      let out = "";
+      if (result.compile_output) out += result.compile_output + "\n";
+      if (result.error) out += result.error + "\n";
+      if (result.output) out += result.output;
+      if (!out.trim()) out = "Program finished with no output.\n";
+      out += `\n[Process exited] Time: ${result.time || "?"}s | Memory: ${result.memory || "?"}KB`;
+      syncOutput(out);
     } catch (err) {
-      syncOutput(`Execution Request Failed: ${err.response?.data?.message || err.message}`, true);
+      syncOutput(`Error: ${err.response?.data?.message || err.message}`);
     } finally {
       setStatus(false);
     }
   }, [code, language, isRunning, setStatus, syncOutput]);
 
-  return {
-    language,
-    setLanguage,
-    output,
-    isRunning,
-    runCode,
-    clearOutput
-  };
+  return { language, setLanguage, output, isRunning, runCode, clearOutput, stdinRef };
 }
