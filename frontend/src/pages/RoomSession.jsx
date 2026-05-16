@@ -299,7 +299,8 @@ export default function RoomSessionPage() {
     output,
     isRunning,
     runCode,
-    clearOutput
+    clearOutput,
+    stdinRef,
   } = useCodeExecution(socket, roomId, code);
 
   const [activeTab, setActiveTab] = useState('editor'); // 'editor' | 'whiteboard'
@@ -570,47 +571,20 @@ export default function RoomSessionPage() {
             </div>
           </div>
 
-          {/* Code editor — live collaborative */}
+          {/* Code editor — IDE layout */}
           {activeTab === 'editor' && (
-            <div className="rs-editor-layout">
-              <div className="rs-editor-toolbar">
-                <select 
-                  className="rs-lang-select" 
-                  value={language} 
-                  onChange={(e) => setLanguage(e.target.value)}
-                  disabled={isRunning}
-                >
-                  <option value="javascript">JavaScript</option>
-                  <option value="python">Python</option>
-                  <option value="java">Java</option>
-                  <option value="cpp">C++</option>
-                </select>
-                <button 
-                  className="rs-run-btn" 
-                  onClick={runCode} 
-                  disabled={isRunning}
-                >
-                  {isRunning ? "⏳ Running..." : "▶ Run Code"}
-                </button>
-              </div>
-              <div className="rs-editor-wrap">
-                <CodeEditor
-                  value={code}
-                  language={language}
-                  onChange={handleEditorChange}
-                  isConnected={isConnected}
-                />
-              </div>
-              <div className="rs-terminal">
-                <div className="rs-terminal-header">
-                  <span className="rs-terminal-title">Terminal Output</span>
-                  <button className="rs-terminal-clear" onClick={clearOutput}>Clear</button>
-                </div>
-                <div className="rs-terminal-body">
-                  <pre className="rs-terminal-output">{output || "Run code to see output..."}</pre>
-                </div>
-              </div>
-            </div>
+            <CodeEditor
+              value={code}
+              onChange={handleEditorChange}
+              isConnected={isConnected}
+              language={language}
+              setLanguage={setLanguage}
+              output={output}
+              isRunning={isRunning}
+              onRun={runCode}
+              onClear={clearOutput}
+              stdinRef={stdinRef}
+            />
           )}
 
           {/* Whiteboard canvas */}
