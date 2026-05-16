@@ -1,5 +1,6 @@
 import './ProjectCard.css';
 
+/* ── Icons ── */
 const MoreIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
     strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -18,12 +19,13 @@ const RoomIcon = () => (
   </svg>
 );
 
-const CommitIcon = () => (
+const UsersIcon = () => (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
     strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="4" />
-    <line x1="1.05" y1="12" x2="7" y2="12" />
-    <line x1="17.01" y1="12" x2="22.96" y2="12" />
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
   </svg>
 );
 
@@ -35,36 +37,37 @@ const ArrowIcon = () => (
   </svg>
 );
 
-const avatarColors = ['#6366F1','#0EA5E9','#F59E0B','#10B981','#EC4899','#8B5CF6'];
-const getColor = (char) => avatarColors[char.charCodeAt(0) % avatarColors.length];
+const tagColors = [
+  { bg: '#EFF6FF', color: '#1D4ED8' },
+  { bg: '#FEF3C7', color: '#92400E' },
+  { bg: '#FEE2E2', color: '#991B1B' },
+  { bg: '#E0F2FE', color: '#0369A1' },
+  { bg: '#EDE9FE', color: '#5B21B6' },
+  { bg: '#ECFDF5', color: '#065F46' },
+  { bg: '#FFF7ED', color: '#9A3412' },
+];
 
-const AvatarGroup = ({ count }) => {
-  const letters = Array.from({ length: Math.min(count, 3) }, (_, i) =>
-    String.fromCharCode(65 + i));
-  const extra = count - letters.length;
-  return (
-    <div className="pc-avatar-group">
-      {letters.map((l, i) => (
-        <div key={i} className="pc-avatar" style={{ background: getColor(l), zIndex: letters.length - i }}>
-          {l}
-        </div>
-      ))}
-      {extra > 0 && <div className="pc-avatar pc-avatar--extra">+{extra}</div>}
-    </div>
-  );
-};
+function getTagStyle(tag) {
+  const idx = tag.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % tagColors.length;
+  return tagColors[idx];
+}
 
-const tagStyles = {
-  'High Priority': { bg: '#FEF3C7', color: '#92400E' },
-  'Critical':      { bg: '#FEE2E2', color: '#991B1B' },
-  'Marketing':     { bg: '#E0F2FE', color: '#0369A1' },
-  'Design':        { bg: '#EDE9FE', color: '#5B21B6' },
-};
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
 
-export default function ProjectCard({ project, large = false, empty = false }) {
+export default function ProjectCard({ project, onClick, onDelete, empty = false }) {
   if (empty) {
     return (
-      <div className="project-card project-card--empty">
+      <div className="project-card project-card--empty" onClick={onClick} role="button" tabIndex={0}>
         <div className="project-card-empty-icon">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
             stroke="var(--color-text-muted)" strokeWidth="1.5" strokeLinecap="round"
@@ -79,52 +82,57 @@ export default function ProjectCard({ project, large = false, empty = false }) {
     );
   }
 
-  const { name, description, tag, activeRooms, commits, collaborators, image } = project;
-  const tagStyle = tagStyles[tag] || { bg: '#F3F4F6', color: '#374151' };
+  const { name, description, tags = [], roomCount = 0, memberCount = 0, updatedAt } = project;
+
+  const handleMoreClick = (e) => {
+    e.stopPropagation();
+    if (onDelete && window.confirm(`Delete project "${name}"?`)) {
+      onDelete();
+    }
+  };
 
   return (
-    <div className={`project-card ${large ? 'project-card--large' : ''}`}>
-      {image && <div className="project-card-image"><img src={image} alt={name} /></div>}
-
+    <div className="project-card" onClick={onClick} role="button" tabIndex={0}>
       <div className="project-card-body">
-        {tag && (
-          <span className="project-tag" style={{ background: tagStyle.bg, color: tagStyle.color }}>
-            {tag}
-          </span>
+        {/* Tags */}
+        {tags.length > 0 && (
+          <div className="project-tags">
+            {tags.slice(0, 3).map((tag) => {
+              const style = getTagStyle(tag);
+              return (
+                <span key={tag} className="project-tag" style={{ background: style.bg, color: style.color }}>
+                  {tag}
+                </span>
+              );
+            })}
+          </div>
         )}
 
         <div className="project-card-header-row">
           <h3 className="project-name">{name}</h3>
-          <button className="project-more-btn" aria-label="Project options">
+          <button className="project-more-btn" onClick={handleMoreClick} aria-label="Project options">
             <MoreIcon />
           </button>
         </div>
 
-        <p className="project-description">{description}</p>
+        {description && <p className="project-description">{description}</p>}
 
         <div className="project-card-footer">
           <div className="project-stats">
-            {activeRooms != null && (
-              <span className="project-stat">
-                <RoomIcon /> {activeRooms} Active Rooms
-              </span>
-            )}
-            {commits != null && (
-              <span className="project-stat">
-                <CommitIcon /> {commits} Commits
-              </span>
-            )}
-            {activeRooms != null && !commits && (
-              <span className="project-stat">
-                {activeRooms} ROOMS
-              </span>
-            )}
+            <span className="project-stat">
+              <RoomIcon /> {roomCount} {roomCount === 1 ? 'Room' : 'Rooms'}
+            </span>
+            <span className="project-stat">
+              <UsersIcon /> {memberCount} {memberCount === 1 ? 'Member' : 'Members'}
+            </span>
           </div>
           <div className="project-card-right">
-            {collaborators && <AvatarGroup count={collaborators} />}
-            {!commits && !collaborators && (
-              <button className="project-arrow-btn"><ArrowIcon /></button>
+            {updatedAt && (
+              <span className="project-time">{timeAgo(updatedAt)}</span>
             )}
+            <button className="project-arrow-btn" tabIndex={-1}>
+              <ArrowIcon />
+            </button>
           </div>
         </div>
       </div>

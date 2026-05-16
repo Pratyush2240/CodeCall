@@ -7,13 +7,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Users ──────────────────────────────────────────
 model User {
   id        String   @id @default(uuid())
   username  String   @unique
   email     String   @unique
   password  String
   role      Role     @default(USER)
-  refreshTokens RefreshToken[]
+
+  refreshTokens      RefreshToken[]
+  ownedProjects      Project[]         @relation("ProjectOwner")
+  projectMemberships ProjectMember[]
+  createdRooms       Room[]            @relation("RoomCreator")
+  roomParticipations RoomParticipant[]
+
   createdAt DateTime @default(now())
 }
 
@@ -22,9 +29,9 @@ enum Role {
   ADMIN
 }
 
-
+// ─── Friends ────────────────────────────────────────
 model Friend {
-  id          String        @id @default(uuid())
+  id          String       @id @default(uuid())
   requesterId String
   receiverId  String
   status      FriendStatus @default(PENDING)
@@ -39,28 +46,103 @@ enum FriendStatus {
   BLOCKED
 }
 
+// ─── Sessions (legacy 1-on-1) ───────────────────────
 model Session {
   id        String        @id @default(uuid())
   hostId    String
-  guestId  String?
+  guestId   String?
   status    SessionStatus @default(WAITING)
   createdAt DateTime      @default(now())
   endedAt   DateTime?
-}
-
-model RefreshToken {
-  id         String   @id @default(uuid())
-  tokenHash  String   @unique
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-
-  @@index([userId])
 }
 
 enum SessionStatus {
   WAITING
   ACTIVE
   ENDED
+}
+
+// ─── Auth Tokens ────────────────────────────────────
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ─── Projects ───────────────────────────────────────
+model Project {
+  id          String          @id @default(uuid())
+  name        String
+  description String?
+  tags        String[]        @default([])
+  ownerId     String
+  owner       User            @relation("ProjectOwner", fields: [ownerId], references: [id])
+  members     ProjectMember[]
+  rooms       Room[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([ownerId])
+}
+
+model ProjectMember {
+  id        String      @id @default(uuid())
+  userId    String
+  projectId String
+  role      ProjectRole @default(MEMBER)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  joinedAt  DateTime    @default(now())
+
+  @@unique([userId, projectId])
+  @@index([projectId])
+}
+
+enum ProjectRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+// ─── Rooms ──────────────────────────────────────────
+model Room {
+  id           String            @id @default(uuid())
+  name         String
+  code         String            @unique
+  status       RoomStatus        @default(ACTIVE)
+  createdById  String
+  createdBy    User              @relation("RoomCreator", fields: [createdById], references: [id])
+  projectId    String?
+  project      Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  participants RoomParticipant[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  lastActivity DateTime          @default(now())
+  endedAt      DateTime?
+
+  @@index([createdById])
+  @@index([projectId])
+  @@index([code])
+}
+
+enum RoomStatus {
+  ACTIVE
+  ENDED
+}
+
+model RoomParticipant {
+  id       String   @id @default(uuid())
+  userId   String
+  roomId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room     Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  joinedAt DateTime @default(now())
+
+  @@unique([userId, roomId])
+  @@index([roomId])
 }
