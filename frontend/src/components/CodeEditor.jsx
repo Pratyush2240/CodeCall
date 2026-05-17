@@ -20,6 +20,7 @@ export default function CodeEditor({
   onRun,
   onClear,
   stdinRef,
+  onEditorMount,
 }) {
   const editorRef = useRef(null);
   const [termOpen, setTermOpen] = useState(true);
@@ -29,7 +30,10 @@ export default function CodeEditor({
   const handleMount = useCallback((editor) => {
     editorRef.current = editor;
     editor.focus();
-  }, []);
+
+    // Expose editor instance to parent for cursor sync
+    onEditorMount?.(editor);
+  }, [onEditorMount]);
 
   // Keep stdinRef in sync so the hook can read it on Run
   useEffect(() => {
