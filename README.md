@@ -1,165 +1,124 @@
----
+# CodeCall
 
-# CodeCall Backend
+Real-time collaborative coding platform with integrated IDE, whiteboard, video calling, and project management.
 
-Secure, modular, production-ready backend built with Node.js, Express, PostgreSQL, and Prisma.
+## Tech Stack
 
-Designed using layered architecture, security-first principles, and structured development phases.
+### Frontend
 
----
+| Technology | Purpose |
+|---|---|
+| **React 19** | Component-based UI framework |
+| **Vite** | Build tool and dev server |
+| **React Router v7** | Client-side routing |
+| **Monaco Editor** | VS Code-powered code editor with syntax highlighting, IntelliSense |
+| **Socket.IO Client** | Real-time bidirectional communication |
+| **Axios** | HTTP client for REST API calls |
 
-##  Tech Stack
+### Backend
 
-* **Node.js**
-* **Express.js**
-* **PostgreSQL**
-* **Prisma ORM**
-* **Zod (Validation)**
-* **JWT (Authentication)**
-* **Winston (Logging)**
-* **Helmet (Security Headers)**
-* **express-rate-limit (API Protection)**
+| Technology | Purpose |
+|---|---|
+| **Node.js + Express** | REST API server |
+| **Socket.IO** | WebSocket server for real-time collaboration |
+| **PostgreSQL** | Primary relational database |
+| **Prisma ORM** | Type-safe database access, migrations, schema management |
+| **JWT** | Stateless authentication (access + refresh tokens) |
+| **bcrypt** | Password hashing |
+| **Zod** | Runtime request validation |
+| **Helmet** | Security HTTP headers |
+| **express-rate-limit** | API rate limiting and brute-force protection |
+| **Winston** | Structured logging |
+| **Swagger** | Auto-generated API documentation |
+| **Axios** | Server-side HTTP client (Judge0 API proxy) |
+| **prom-client** | Prometheus metrics |
+| **BullMQ + Redis** | Background job processing |
 
----
+### External Services
 
-##  Architecture Overview
+| Service | Purpose |
+|---|---|
+| **Judge0 CE** | Remote code execution engine (JS, Python, Java, C++) |
+| **WebRTC** | Peer-to-peer video/audio calling |
 
-```text
-Client Request
-      ↓
-Request Logger (Winston)
-      ↓
-Rate Limiter
-      ↓
-Validation (Zod)
-      ↓
-Authentication (JWT)
-      ↓
-Authorization (RBAC)
-      ↓
-Controller
-      ↓
-Service Layer
-      ↓
-Database (Prisma)
-      ↓
-Global Error Handler
+## Features
+
+- **Collaborative Code Editor** — Real-time synchronized editing via Monaco + Socket.IO
+- **Code Execution** — Run code in 4 languages with shared terminal output
+- **Whiteboard** — Freehand drawing canvas synced across participants
+- **DSA Board** — Interactive data structure visualization (arrays, linked lists, trees, graphs)
+- **Video/Audio Calling** — WebRTC-based peer-to-peer communication
+- **Live Chat** — In-room text messaging
+- **Project Management** — Create projects, organize rooms under projects, track activity
+- **Room System** — Create/join rooms by invite code, persistent room history
+- **Authentication** — JWT-based with refresh token rotation
+
+## Project Structure
+
+```
+CodeCall/
+├── backend/
+│   ├── prisma/              # Schema & migrations
+│   └── src/
+│       ├── config/          # DB, env, swagger config
+│       ├── middlewares/     # Auth, rate-limit, logging, error handling
+│       ├── modules/         # Feature modules (auth, room, project, execution, etc.)
+│       ├── sockets/         # Socket.IO event handlers
+│       ├── utils/           # JWT, AppError, helpers
+│       ├── app.js           # Express app setup
+│       └── server.js        # HTTP + Socket.IO server entry
+├── frontend/
+│   └── src/
+│       ├── api/             # Axios API clients
+│       ├── components/      # Reusable UI components
+│       ├── hooks/           # Custom React hooks (chat, code, whiteboard, WebRTC)
+│       ├── pages/           # Route-level pages
+│       ├── socket/          # Socket.IO client instance
+│       └── App.jsx          # Router setup
 ```
 
-Project structure:
+## Quick Start
 
+```bash
+# Backend
+cd backend
+cp .env.example .env        # Configure DATABASE_URL, JWT secrets
+npm install
+npx prisma migrate dev
+npm run dev                  # http://localhost:5000
+
+# Frontend
+cd frontend
+npm install
+npm run dev                  # http://localhost:5173
 ```
-backend/src/
- ├── config/
- ├── middlewares/
- ├── modules/
- ├── utils/
- ├── app.js
- └── server.js
-```
 
----
-
-##  Security & Stability Highlights
-
-* JWT Access & Refresh Token Authentication
-* Role-Based Access Control (RBAC)
-* Global Rate Limiting
-* Auth-specific brute-force protection
-* Progressive login slowdown
-* Secure HTTP headers via Helmet
-* Payload size limiting
-* Zod-based request validation
-* Fail-fast environment variable validation
-* Centralized error handling
-* Structured logging with Winston
-
----
-
-##  Environment Setup
-
-Create a `.env` file:
+### Environment Variables
 
 ```env
 NODE_ENV=development
 PORT=5000
-DATABASE_URL=postgresql://postgres:password%40encoded@localhost:5432/codecall
-
-JWT_ACCESS_SECRET=your_super_long_access_secret_min_32_characters
-JWT_REFRESH_SECRET=your_super_long_refresh_secret_min_32_characters
-
+DATABASE_URL=postgresql://user:password@localhost:5432/codecall
+JWT_ACCESS_SECRET=<min 32 chars>
+JWT_REFRESH_SECRET=<min 32 chars>
 JWT_ACCESS_EXPIRES=15m
 JWT_REFRESH_EXPIRES=7d
+JUDGE0_API_URL=https://ce.judge0.com
 ```
 
-> If your DB password contains special characters (e.g. `@`), URL-encode them (`@` → `%40`).
+## API Endpoints
 
----
+| Module | Routes | Auth |
+|---|---|---|
+| Auth | `POST /api/auth/register`, `/login`, `/refresh`, `/logout` | No |
+| Rooms | `GET/POST /api/rooms`, `POST /join`, `PATCH /:id/end` | Yes |
+| Projects | `GET/POST /api/projects`, `PATCH/DELETE /:id` | Yes |
+| Execution | `POST /api/execute` | Yes |
+| Users | `GET /api/user/me` | Yes |
+| Health | `GET /api/health`, `/api/metrics` | No |
 
-##  Running the Project
+Full API docs available at `/api/docs` (Swagger UI).
 
-Install dependencies:
+## License
 
-```bash
-npm install
-```
-
-Development:
-
-```bash
-npm run dev
-```
-
-Production:
-
-```bash
-npm start
-```
-
-Health check:
-
-```
-GET /health
-```
-
----
-
-##  Branching Strategy
-
-```
-feature/* → dev → main
-```
-
-* `feature/*` → Feature development
-* `dev` → Integration branch
-* `main` → Stable release branch
-
-Issues close when merged into `main`.
-
----
-
-##  Detailed Architecture & Development Phases
-
-For full architectural breakdown and phase-by-phase development:
-
- See [ARCHITECTURE.md](./ARCHITECTURE.md)
-
----
-
-##  Roadmap
-
-* Refresh Token Rotation
-* Correlation ID Logging
-* Audit Logging
-* Advanced Prisma Transactions
-* Log File Rotation
-
----
-
-##  License
-
-MIT License
-
----
-
-
+MIT

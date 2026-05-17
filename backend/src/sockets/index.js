@@ -7,6 +7,7 @@ import { registerWebRTCEvents } from "./webrtc.socket.js";
 import { registerPresenceEvents, trackJoin, trackDisconnect } from "./presence.socket.js";
 import { registerChatEvents } from "./chat.socket.js";
 import { registerExecutionEvents } from "./execution.socket.js";
+import { registerCursorEvents } from "./cursor.socket.js";
 
 /**
  * Initialise Socket.IO on the existing HTTP server.
@@ -67,6 +68,7 @@ export const initSocket = (server) => {
     registerPresenceEvents(io, socket);
     registerChatEvents(io, socket);
     registerExecutionEvents(io, socket);
+    registerCursorEvents(io, socket);
 
     // ── Disconnect ────────────────────────────────────────
     socket.on("disconnect", () => {
