@@ -8,6 +8,7 @@ import { useChat } from '../hooks/useChat';
 import { useWebRTC } from '../hooks/useWebRTC';
 import { useWhiteboard } from '../hooks/useWhiteboard';
 import { useCodeExecution } from '../hooks/useCodeExecution';
+import { useCursors } from '../hooks/useCursors';
 import CodeEditor from '../components/CodeEditor';
 import DSACanvas from '../components/DSACanvas';
 import './RoomSession.css';
@@ -254,9 +255,16 @@ export default function RoomSessionPage() {
   /* ── Realtime presence ── */
   const { onlineUsers, typingUsers, emitTyping } = usePresence(socket, roomId);
 
+  /* ── Collaborative cursor sync ── */
+  const [editorInstance, setEditorInstance] = useState(null);
+  const { markLocalEdit } = useCursors(socket, roomId, editorInstance, currentUserId);
+
   /* ── Collaborative code sync (typing callback wired in) ── */
   const { code, handleEditorChange } = useCollaborativeCode(socket, roomId, {
-    onLocalChange: emitTyping,
+    onLocalChange: () => {
+      emitTyping();
+      markLocalEdit();
+    },
   });
 
   /* ── Room chat ── */
@@ -584,6 +592,7 @@ export default function RoomSessionPage() {
               onRun={runCode}
               onClear={clearOutput}
               stdinRef={stdinRef}
+              onEditorMount={setEditorInstance}
             />
           )}
 
