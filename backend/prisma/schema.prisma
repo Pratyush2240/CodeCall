@@ -14,12 +14,14 @@ model User {
   email     String   @unique
   password  String
   role      Role     @default(USER)
+  fullName  String?
 
-  refreshTokens      RefreshToken[]
-  ownedProjects      Project[]         @relation("ProjectOwner")
-  projectMemberships ProjectMember[]
-  createdRooms       Room[]            @relation("RoomCreator")
-  roomParticipations RoomParticipant[]
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  ownedProjects       Project[]         @relation("ProjectOwner")
+  projectMemberships  ProjectMember[]
+  createdRooms        Room[]            @relation("RoomCreator")
+  roomParticipations  RoomParticipant[]
 
   createdAt DateTime @default(now())
 }
@@ -27,6 +29,20 @@ model User {
 enum Role {
   USER
   ADMIN
+}
+
+// ─── Password Reset ─────────────────────────────────
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
 }
 
 // ─── Friends ────────────────────────────────────────
