@@ -6,6 +6,7 @@ import {
   verifyRefreshToken
 } from "../../utils/jwt.js";
 import AppError from "../../utils/appError.js";
+import { sendResetEmail } from "../../utils/mailer.js";
 import crypto from "crypto";
 
 /**
@@ -19,7 +20,7 @@ const hashToken = (token) =>
  * REGISTER USER
  * ================================
  */
-export const registerUser = async ({ username, email, password }) => {
+export const registerUser = async ({ fullName, username, email, password }) => {
   const existingUser = await prisma.user.findFirst({
     where: {
       OR: [{ email }, { username }]
@@ -27,24 +28,55 @@ export const registerUser = async ({ username, email, password }) => {
   });
 
   if (existingUser) {
-    throw new AppError("User already exists", 400);
+    if (existingUser.email === email) {
+      throw new AppError("An account with this email already exists.", 400);
+    }
+    throw new AppError("This username is already taken.", 400);
   }
 
   const hashedPassword = await hashPassword(password);
 
   const user = await prisma.user.create({
     data: {
+      fullName: fullName?.trim() || null,
       username,
       email,
       password: hashedPassword
     }
   });
 
-  return {
-    id: user.id,
-    username: user.username,
-    email: user.email,
+  // Auto-login: generate tokens
+  const accessToken = generateAccessToken({
+    userId: user.id,
     role: user.role
+  });
+
+  const refreshToken = generateRefreshToken({
+    userId: user.id
+  });
+
+  const hashedRefresh = hashToken(refreshToken);
+
+  await prisma.refreshToken.create({
+    data: {
+      tokenHash: hashedRefresh,
+      userId: user.id,
+      expiresAt: new Date(
+        Date.now() + Number(process.env.REFRESH_TOKEN_EXPIRY_MS)
+      )
+    }
+  });
+
+  return {
+    user: {
+      id: user.id,
+      fullName: user.fullName,
+      username: user.username,
+      email: user.email,
+      role: user.role
+    },
+    accessToken,
+    refreshToken,
   };
 };
 
@@ -108,35 +140,28 @@ export const refreshUserToken = async (refreshToken) => {
     where: { tokenHash: hashedToken }
   });
 
-  // 🔎 Possible reuse attempt
+  // Possible reuse attempt
   if (!storedToken) {
     try {
       const payload = verifyRefreshToken(refreshToken);
-
-      // Revoke all sessions of this user
       await prisma.refreshToken.deleteMany({
         where: { userId: payload.userId }
       });
-
     } catch (err) {
       throw new AppError("Invalid refresh token", 403);
     }
-
     throw new AppError("Refresh token reuse detected", 403);
   }
 
-  // Expired token cleanup
   if (storedToken.expiresAt < new Date()) {
     await prisma.refreshToken.delete({
       where: { id: storedToken.id }
     });
-
     throw new AppError("Refresh token expired", 401);
   }
 
   const payload = verifyRefreshToken(refreshToken);
 
-  // ROTATION: delete old token
   await prisma.refreshToken.delete({
     where: { id: storedToken.id }
   });
@@ -189,4 +214,99 @@ export const logoutUser = async (refreshToken) => {
   });
 
   return { message: "Logged out successfully" };
+};
+
+/**
+ * ================================
+ * FORGOT PASSWORD — generate reset token
+ * ================================
+ */
+export const forgotPassword = async (email) => {
+  const user = await prisma.user.findUnique({ where: { email } });
+
+  // Always return success to prevent email enumeration
+  if (!user) {
+    return { message: "If that email exists, a reset link has been sent." };
+  }
+
+  // Invalidate any existing tokens for this user
+  await prisma.passwordResetToken.updateMany({
+    where: { userId: user.id, used: false },
+    data: { used: true },
+  });
+
+  // Generate a secure random token
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+  await prisma.passwordResetToken.create({
+    data: {
+      token: tokenHash,
+      userId: user.id,
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes
+    },
+  });
+
+  // In production, send email here via Nodemailer.
+  // For now, log the reset link for development.
+  const resetUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password/${rawToken}`;
+
+  // Send the email
+  try {
+    await sendResetEmail(email, resetUrl);
+  } catch (err) {
+    console.error("[mail] Failed to send reset email:", err.message);
+    // Still return success to prevent enumeration
+  }
+
+  return { message: "If that email exists, a reset link has been sent." };
+};
+
+/**
+ * ================================
+ * RESET PASSWORD — verify token & update
+ * ================================
+ */
+export const resetPassword = async (token, newPassword) => {
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+  const resetRecord = await prisma.passwordResetToken.findUnique({
+    where: { token: tokenHash },
+  });
+
+  if (!resetRecord) {
+    throw new AppError("Invalid or expired reset token.", 400);
+  }
+
+  if (resetRecord.used) {
+    throw new AppError("This reset link has already been used.", 400);
+  }
+
+  if (resetRecord.expiresAt < new Date()) {
+    await prisma.passwordResetToken.update({
+      where: { id: resetRecord.id },
+      data: { used: true },
+    });
+    throw new AppError("This reset link has expired.", 400);
+  }
+
+  const hashedPassword = await hashPassword(newPassword);
+
+  // Update password + mark token as used in a transaction
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: resetRecord.userId },
+      data: { password: hashedPassword },
+    }),
+    prisma.passwordResetToken.update({
+      where: { id: resetRecord.id },
+      data: { used: true },
+    }),
+    // Revoke all refresh tokens so user must re-login
+    prisma.refreshToken.deleteMany({
+      where: { userId: resetRecord.userId },
+    }),
+  ]);
+
+  return { message: "Password has been reset successfully." };
 };

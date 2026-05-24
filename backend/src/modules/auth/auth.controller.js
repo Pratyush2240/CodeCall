@@ -2,20 +2,24 @@ import {
   registerUser,
   loginUser,
   refreshUserToken,
-  logoutUser
+  logoutUser,
+  forgotPassword,
+  resetPassword,
 } from "./auth.service.js";
 
 import catchAsync from "../../utils/catchAsync.js";
 
 /**
- * REGISTER
+ * REGISTER — auto-login on success
  */
 export const register = catchAsync(async (req, res) => {
   const result = await registerUser(req.body);
 
   res.status(201).json({
     status: "success",
-    data: result,
+    data: result.user,
+    accessToken: result.accessToken,
+    refreshToken: result.refreshToken,
   });
 });
 
@@ -55,9 +59,37 @@ export const refresh = catchAsync(async (req, res) => {
  * LOGOUT
  */
 export const logout = catchAsync(async (req, res) => {
-  const userId = req.user?.id;
+  const { refreshToken } = req.body;
 
-  const result = await logoutUser(userId);
+  const result = await logoutUser(refreshToken);
+
+  res.status(200).json({
+    status: "success",
+    ...result,
+  });
+});
+
+/**
+ * FORGOT PASSWORD
+ */
+export const forgotPwd = catchAsync(async (req, res) => {
+  const { email } = req.body;
+
+  const result = await forgotPassword(email);
+
+  res.status(200).json({
+    status: "success",
+    ...result,
+  });
+});
+
+/**
+ * RESET PASSWORD
+ */
+export const resetPwd = catchAsync(async (req, res) => {
+  const { token, password } = req.body;
+
+  const result = await resetPassword(token, password);
 
   res.status(200).json({
     status: "success",

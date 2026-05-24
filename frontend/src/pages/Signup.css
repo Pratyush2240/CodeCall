@@ -1,0 +1,92 @@
+/* ── Signup-specific styles (extends Login.css) ── */
+
+.form-input--error {
+  border-color: #EF4444 !important;
+  background: #FEF2F2 !important;
+}
+
+.field-error {
+  font-size: 12px;
+  font-weight: 500;
+  color: #EF4444;
+  margin-top: 2px;
+  animation: errorIn 0.2s ease both;
+}
+
+/* Password toggle */
+.pwd-toggle-btn {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  transition: color 0.2s ease;
+}
+
+.pwd-toggle-btn:hover {
+  color: var(--color-text-secondary);
+}
+
+/* Password strength bar */
+.pw-strength {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.pw-bar-track {
+  flex: 1;
+  height: 4px;
+  background: var(--color-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.pw-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+
+.pw-strength-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+/* Password rules */
+.pw-rules {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+.pw-rule {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  transition: color 0.2s;
+}
+
+.pw-rule--pass {
+  color: #10B981;
+}
+
+.pw-rule svg {
+  flex-shrink: 0;
+}
