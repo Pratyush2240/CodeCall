@@ -3,19 +3,12 @@ import {
   register,
   login,
   refresh,
-  logout,
-  forgotPwd,
-  resetPwd,
+  logout
 } from "./auth.controller.js";
 
 import { requireAuth } from "../../middlewares/requireAuth.js";
 import validate from "../../middlewares/validate.middleware.js";
-import {
-  registerSchema,
-  loginSchema,
-  forgotPasswordSchema,
-  resetPasswordSchema,
-} from "./auth.validation.js";
+import { registerSchema, loginSchema } from "./auth.validation.js";
 import { authLimiter } from "../../middlewares/rateLimiter.js";
 
 const router = Router();
@@ -39,20 +32,8 @@ router.post(
 
 router.post("/refresh", refresh);
 
-router.post(
-  "/forgot-password",
-  authLimiter,
-  validate(forgotPasswordSchema),
-  forgotPwd
-);
-
-router.post(
-  "/reset-password",
-  authLimiter,
-  validate(resetPasswordSchema),
-  resetPwd
-);
-
+// router.post("/login", authLimiter, login);
+// router.post("/register", authLimiter, register);
 /**
  * Protected Routes
  */
