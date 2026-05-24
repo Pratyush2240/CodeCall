@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import './Login.css';
 import API from '../api/axios';
 
@@ -130,9 +130,9 @@ export default function LoginPage() {
           <div className="field-group">
             <div className="field-label-row">
               <label className="field-label" htmlFor="password-input">Password</label>
-              <a href="#recovery" className="recovery-link" aria-label="Recover your password">
+              <Link to="/forgot-password" className="recovery-link" aria-label="Recover your password">
                 Recovery
-              </a>
+              </Link>
             </div>
             <div className="input-wrapper" style={{ position: 'relative' }}>
               <input
@@ -199,7 +199,7 @@ export default function LoginPage() {
           {/* Register hint */}
           <p className="register-hint">
             New to the platform?&nbsp;
-            <a href="#request" aria-label="Request platform credentials">Request Credentials</a>
+            <Link to="/signup" aria-label="Request platform credentials">Request Credentials</Link>
           </p>
         </form>
       </div>
