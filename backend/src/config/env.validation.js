@@ -12,6 +12,13 @@ const envSchema = z.object({
 
   JWT_ACCESS_EXPIRES: z.string(),
   JWT_REFRESH_EXPIRES: z.string(),
+
+  // OAuth — optional (server starts without them; OAuth routes will fail gracefully)
+  GITHUB_CLIENT_ID: z.string().optional(),
+  GITHUB_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  CLIENT_URL: z.string().url().optional(),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

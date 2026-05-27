@@ -8,6 +8,7 @@ import ProjectsPage       from './pages/Projects';
 import ProjectDetailPage  from './pages/ProjectDetail';
 import RoomsPage          from './pages/Rooms';
 import RoomSessionPage    from './pages/RoomSession';
+import OAuthCallbackPage  from './pages/OAuthCallback';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
         <Route path="/signup"                 element={<SignupPage />} />
         <Route path="/forgot-password"        element={<ForgotPasswordPage />} />
         <Route path="/reset-password/:token"  element={<ResetPasswordPage />} />
+        <Route path="/oauth/callback"         element={<OAuthCallbackPage />} />
         <Route path="/dashboard"              element={<DashboardPage />} />
         <Route path="/projects"               element={<ProjectsPage />} />
         <Route path="/projects/:projectId"    element={<ProjectDetailPage />} />

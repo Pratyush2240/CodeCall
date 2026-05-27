@@ -9,12 +9,18 @@ datasource db {
 
 // ─── Users ──────────────────────────────────────────
 model User {
-  id        String   @id @default(uuid())
-  username  String   @unique
-  email     String   @unique
-  password  String
-  role      Role     @default(USER)
-  fullName  String?
+  id          String   @id @default(uuid())
+  username    String   @unique
+  email       String   @unique
+  password    String?           // nullable — OAuth-only users have no password
+  role        Role     @default(USER)
+  fullName    String?
+
+  // OAuth provider fields
+  provider    String?           // "github" | "google" | null (local)
+  providerId  String?           // Provider's unique user ID
+  avatar      String?           // Profile picture URL from OAuth provider
+  isOAuthUser Boolean  @default(false)
 
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
@@ -24,6 +30,8 @@ model User {
   roomParticipations  RoomParticipant[]
 
   createdAt DateTime @default(now())
+
+  @@unique([provider, providerId]) // prevents duplicate OAuth accounts
 }
 
 enum Role {
