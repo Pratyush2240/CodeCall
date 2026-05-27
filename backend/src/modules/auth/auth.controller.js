@@ -5,8 +5,10 @@ import {
   logoutUser,
   forgotPassword,
   resetPassword,
+  oauthLogin,
 } from "./auth.service.js";
 
+import { env } from "../../config/env.js";
 import catchAsync from "../../utils/catchAsync.js";
 
 /**
@@ -96,3 +98,41 @@ export const resetPwd = catchAsync(async (req, res) => {
     ...result,
   });
 });
+
+/**
+ * GITHUB OAUTH CALLBACK
+ * Called by Passport after it has resolved the GitHub user.
+ * Generates JWT tokens and redirects to the frontend OAuthCallback page.
+ */
+export const githubCallback = async (req, res) => {
+  try {
+    const { accessToken, refreshToken } = await oauthLogin(req.user);
+    const clientUrl = env.CLIENT_URL || "http://localhost:5173";
+    return res.redirect(
+      `${clientUrl}/oauth/callback?token=${encodeURIComponent(accessToken)}&refresh=${encodeURIComponent(refreshToken)}`
+    );
+  } catch (err) {
+    console.error("[OAuth] GitHub callback error:", err.message);
+    const clientUrl = env.CLIENT_URL || "http://localhost:5173";
+    return res.redirect(`${clientUrl}/login?error=oauth_failed`);
+  }
+};
+
+/**
+ * GOOGLE OAUTH CALLBACK
+ * Called by Passport after it has resolved the Google user.
+ * Generates JWT tokens and redirects to the frontend OAuthCallback page.
+ */
+export const googleCallback = async (req, res) => {
+  try {
+    const { accessToken, refreshToken } = await oauthLogin(req.user);
+    const clientUrl = env.CLIENT_URL || "http://localhost:5173";
+    return res.redirect(
+      `${clientUrl}/oauth/callback?token=${encodeURIComponent(accessToken)}&refresh=${encodeURIComponent(refreshToken)}`
+    );
+  } catch (err) {
+    console.error("[OAuth] Google callback error:", err.message);
+    const clientUrl = env.CLIENT_URL || "http://localhost:5173";
+    return res.redirect(`${clientUrl}/login?error=oauth_failed`);
+  }
+};

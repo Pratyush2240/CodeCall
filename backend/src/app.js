@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import passport from "passport";
 
 import authRoutes from "./modules/auth/auth.routes.js";
 import userRoutes from "./modules/user/user.routes.js";
@@ -21,10 +22,10 @@ import { metricsMiddleware } from "./middlewares/metrics.middleware.js";
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./config/swagger.js";
 
-
 import AppError from "./utils/appError.js";
 
 import "./config/env.validation.js";
+import "./config/passport.js"; // registers GitHub & Google strategies
 
 const app = express();
 
@@ -54,6 +55,8 @@ app.use(cors({
 }));
 app.use(helmet());
 app.use(express.json({ limit: "10kb" }));
+
+app.use(passport.initialize()); // stateless — no session required
 
 app.use(correlationMiddleware);
 app.use(requestLogger);

@@ -376,3 +376,82 @@
     flex-direction: column;
   }
 }
+
+/* ─── OAuth Button Variants ──────────────────────── */
+
+/* Disabled / loading state */
+.btn-alt:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-alt--loading {
+  pointer-events: none;
+}
+
+/* GitHub specific hover */
+.btn-alt--github:not(:disabled):hover {
+  border-color: #30363d;
+  background: #f6f8fa;
+  color: #24292f;
+}
+
+/* Google specific hover */
+.btn-alt--google:not(:disabled):hover {
+  border-color: #4285F4;
+  background: #f8f9ff;
+  color: var(--color-text-primary);
+}
+
+/* Small spinner for OAuth buttons (dark variant for light-bg buttons) */
+.spinner--sm {
+  width: 13px;
+  height: 13px;
+  border-width: 2px;
+  border-color: rgba(0, 0, 0, 0.15);
+  border-top-color: var(--color-text-secondary);
+}
+
+/* ─── OAuth Callback Page ────────────────────────── */
+.oauth-callback-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: var(--space-xl);
+  text-align: center;
+  animation: cardIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.oauth-spinner-wrapper {
+  position: relative;
+  width: 56px;
+  height: 56px;
+}
+
+.oauth-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  animation: spin 0.85s linear infinite;
+}
+
+/* re-use the global @keyframes spin from index.css */
+
+.oauth-callback-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.oauth-callback-status {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin: 0;
+}

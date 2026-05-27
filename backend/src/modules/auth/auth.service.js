@@ -94,6 +94,15 @@ export const loginUser = async ({ email, password }) => {
     throw new AppError("Invalid credentials", 401);
   }
 
+  // OAuth-only users have no password — direct them to OAuth login
+  if (!user.password) {
+    const provider = user.provider ? `${user.provider.charAt(0).toUpperCase() + user.provider.slice(1)}` : "OAuth";
+    throw new AppError(
+      `This account uses ${provider} to sign in. Please use the ${provider} login button.`,
+      401
+    );
+  }
+
   const isValid = await comparePassword(password, user.password);
 
   if (!isValid) {
@@ -309,4 +318,39 @@ export const resetPassword = async (token, newPassword) => {
   ]);
 
   return { message: "Password has been reset successfully." };
+};
+
+/**
+ * ================================
+ * OAUTH LOGIN — issue JWT for resolved OAuth user
+ * ================================
+ * Called after Passport has already resolved/created the user from the provider.
+ * Generates and stores tokens using the same rotation pattern as local auth.
+ *
+ * @param {object} user - Prisma User record resolved by Passport strategy
+ * @returns {{ accessToken: string, refreshToken: string }}
+ */
+export const oauthLogin = async (user) => {
+  const accessToken = generateAccessToken({
+    userId: user.id,
+    role: user.role,
+  });
+
+  const refreshToken = generateRefreshToken({
+    userId: user.id,
+  });
+
+  const hashedToken = hashToken(refreshToken);
+
+  await prisma.refreshToken.create({
+    data: {
+      tokenHash: hashedToken,
+      userId: user.id,
+      expiresAt: new Date(
+        Date.now() + Number(process.env.REFRESH_TOKEN_EXPIRY_MS)
+      ),
+    },
+  });
+
+  return { accessToken, refreshToken };
 };
