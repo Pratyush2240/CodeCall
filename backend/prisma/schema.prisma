@@ -22,6 +22,10 @@ model User {
   avatar      String?           // Profile picture URL from OAuth provider
   isOAuthUser Boolean  @default(false)
 
+  // Onboarding
+  isProfileComplete Boolean @default(false) // false for new OAuth users until they complete setup
+  hasPassword       Boolean @default(false)  // true once a bcrypt password is stored
+
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
   ownedProjects       Project[]         @relation("ProjectOwner")

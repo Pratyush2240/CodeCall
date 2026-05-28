@@ -1,0 +1,524 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import API from '../api/axios';
+import './Login.css';
+import './CompleteProfile.css';
+
+/* ─── Icons ────────────────────────────────────────── */
+const TerminalIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+    strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="4 17 10 11 4 5" />
+    <line x1="12" y1="19" x2="20" y2="19" />
+  </svg>
+);
+
+const CheckIcon = ({ size = 14 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+const XIcon = ({ size = 14 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
+const EyeIcon = ({ show }) => show ? (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+    strokeLinecap="round" strokeLinejoin="round" width="18" height="18" aria-hidden="true">
+    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" />
+    <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19" />
+    <line x1="1" y1="1" x2="23" y2="23" />
+  </svg>
+) : (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+    strokeLinecap="round" strokeLinejoin="round" width="18" height="18" aria-hidden="true">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+const ChevronDown = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="6 9 12 15 18 9" />
+  </svg>
+);
+
+const LockIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M12 1a5 5 0 00-5 5v3H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V11a2 2 0 00-2-2h-1V6a5 5 0 00-5-5zm-3 5a3 3 0 016 0v3H9V6z"/>
+  </svg>
+);
+
+/* ─── Password rules ───────────────────────────────── */
+const PW_RULES = [
+  { id: 'len',   test: (p) => p.length >= 8,    label: '8+ characters' },
+  { id: 'upper', test: (p) => /[A-Z]/.test(p),  label: 'Uppercase letter' },
+  { id: 'num',   test: (p) => /[0-9]/.test(p),  label: 'Number' },
+];
+
+function getStrength(pw) {
+  const passed = PW_RULES.filter(r => r.test(pw)).length;
+  if (passed === 0) return { level: 0, label: '', color: '#6B7280' };
+  if (passed === 1) return { level: 1, label: 'Weak',   color: '#EF4444' };
+  if (passed === 2) return { level: 2, label: 'Fair',   color: '#F59E0B' };
+  return             { level: 3, label: 'Strong', color: '#10B981' };
+}
+
+/* ─── Username availability status ────────────────── */
+// 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
+const STATUS_MSG = {
+  idle:      null,
+  checking:  'Checking availability…',
+  available: 'Username is available',
+  taken:     'Username is already taken',
+  invalid:   'Letters, numbers, and underscores only (3–30 chars)',
+};
+
+/* ─── Component ────────────────────────────────────── */
+export default function CompleteProfilePage() {
+  const navigate = useNavigate();
+
+  /* --- User data from /me ----------------------------- */
+  const [oauthAvatar, setOauthAvatar]     = useState(null);
+  const [oauthFullName, setOauthFullName] = useState('');
+  const [isOAuthUser, setIsOAuthUser]     = useState(false);
+  const [loadingMe, setLoadingMe]         = useState(true);
+
+  /* --- Form state ------------------------------------- */
+  const [fullName, setFullName]           = useState('');
+  const [username, setUsername]           = useState('');
+  const [password, setPassword]           = useState('');
+  const [confirmPwd, setConfirmPwd]       = useState('');
+  const [showPwd, setShowPwd]             = useState(false);
+  const [showPwSection, setShowPwSection] = useState(false);
+
+  /* --- Status ----------------------------------------- */
+  const [usernameStatus, setUsernameStatus] = useState('idle'); // see STATUS_MSG
+  const [fieldErrors, setFieldErrors]     = useState({});
+  const [error, setError]                 = useState('');
+  const [loading, setLoading]             = useState(false);
+
+  const debounceRef = useRef(null);
+  const strength = getStrength(password);
+
+  /* --- Load current user profile ---------------------- */
+  useEffect(() => {
+    API.get('/auth/me')
+      .then(res => {
+        const user = res.data?.data;
+        if (!user) return;
+
+        // If already complete, skip to dashboard
+        if (user.isProfileComplete) {
+          navigate('/dashboard', { replace: true });
+          return;
+        }
+
+        setOauthAvatar(user.avatar || null);
+        setOauthFullName(user.fullName || '');
+        setIsOAuthUser(!!user.isOAuthUser);
+        setFullName(user.fullName || '');
+        // Pre-fill username with the auto-generated one but let user change it
+        setUsername(user.username || '');
+      })
+      .catch(() => {
+        // Token invalid
+        navigate('/login', { replace: true });
+      })
+      .finally(() => setLoadingMe(false));
+  }, [navigate]);
+
+  /* --- Debounced username check ----------------------- */
+  const checkUsername = useCallback((value) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    const norm = value.toLowerCase().trim();
+
+    if (!norm || norm.length < 3) {
+      setUsernameStatus('idle');
+      return;
+    }
+
+    if (!/^[a-z0-9_]{3,30}$/.test(norm)) {
+      setUsernameStatus('invalid');
+      return;
+    }
+
+    setUsernameStatus('checking');
+
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await API.get(`/auth/check-username/${norm}`);
+        setUsernameStatus(res.data.available ? 'available' : 'taken');
+      } catch {
+        setUsernameStatus('idle');
+      }
+    }, 500);
+  }, []);
+
+  const handleUsernameChange = (e) => {
+    const val = e.target.value;
+    setUsername(val);
+    setFieldErrors(p => ({ ...p, username: null }));
+    checkUsername(val);
+  };
+
+  /* --- Validation ------------------------------------- */
+  const validate = () => {
+    const errs = {};
+    if (!fullName.trim() || fullName.trim().length < 2)
+      errs.fullName = 'Full name must be at least 2 characters.';
+
+    if (!username || username.length < 3)
+      errs.username = 'Username must be at least 3 characters.';
+    else if (!/^[a-zA-Z0-9_]+$/.test(username))
+      errs.username = 'Letters, numbers, and underscores only.';
+    else if (usernameStatus === 'taken')
+      errs.username = 'This username is already taken.';
+    else if (usernameStatus === 'checking')
+      errs.username = 'Please wait for username check to complete.';
+
+    if (showPwSection && password) {
+      if (strength.level < 3)
+        errs.password = 'Meet all password requirements.';
+      if (password !== confirmPwd)
+        errs.confirmPwd = 'Passwords do not match.';
+    }
+
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  /* --- Submit ----------------------------------------- */
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      await API.post('/auth/complete-profile', {
+        fullName: fullName.trim(),
+        username: username.trim(),
+        ...(showPwSection && password ? { password, confirmPassword: confirmPwd } : {}),
+      });
+
+      navigate('/dashboard', { replace: true });
+    } catch (err) {
+      setError(err.response?.data?.message ?? 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ─── Helpers ─────────────────────────────────────── */
+  const avatarInitial = (oauthFullName || fullName || 'U').charAt(0).toUpperCase();
+
+  const usernameStatusClass =
+    usernameStatus === 'available' ? 'username-status--available' :
+    usernameStatus === 'taken'     ? 'username-status--taken' :
+    usernameStatus === 'invalid'   ? 'username-status--invalid' :
+    'username-status--checking';
+
+  /* ─── Loading skeleton ──────────────────────────────── */
+  if (loadingMe) {
+    return (
+      <main className="login-page" role="main" aria-label="Loading profile">
+        <div className="oauth-callback-card">
+          <div className="oauth-spinner-wrapper" aria-hidden="true">
+            <span className="oauth-ring" />
+          </div>
+          <h1 className="oauth-callback-title">Loading your profile…</h1>
+        </div>
+      </main>
+    );
+  }
+
+  /* ─── Main render ───────────────────────────────────── */
+  return (
+    <main className="login-page" role="main">
+
+      {/* ── Header ── */}
+      <header className="login-header">
+        <div className="logo-bubble" aria-label="CodeCall logo">
+          <TerminalIcon />
+        </div>
+        <div className="onboarding-step">
+          <span className="onboarding-step-dot" />
+          One last step
+        </div>
+        <h1 className="login-heading">Complete Your Profile</h1>
+        <p className="login-subtitle">
+          {isOAuthUser
+            ? 'Personalise your CodeCall identity before diving in.'
+            : 'Finish setting up your account to get started.'}
+        </p>
+      </header>
+
+      {/* ── Card ── */}
+      <div className="login-card" role="region" aria-label="Profile completion form">
+        <form
+          className="login-form"
+          onSubmit={handleSubmit}
+          noValidate
+          aria-label="Complete profile form"
+        >
+
+          {/* Avatar preview */}
+          <div className="onboarding-avatar-wrapper">
+            {oauthAvatar ? (
+              <img
+                src={oauthAvatar}
+                alt="Your profile picture from OAuth provider"
+                className="onboarding-avatar"
+              />
+            ) : (
+              <div className="onboarding-avatar-placeholder" aria-hidden="true">
+                {avatarInitial}
+              </div>
+            )}
+            {oauthAvatar && (
+              <span className="onboarding-avatar-hint">Profile picture from your provider</span>
+            )}
+          </div>
+
+          {/* Full Name */}
+          <div className="field-group">
+            <label className="field-label" htmlFor="cp-fullname">Full Name</label>
+            <div className="input-wrapper">
+              <input
+                id="cp-fullname"
+                className={`form-input ${fieldErrors.fullName ? 'form-input--error' : ''}`}
+                type="text"
+                autoComplete="name"
+                placeholder="Jane Doe"
+                value={fullName}
+                onChange={e => {
+                  setFullName(e.target.value);
+                  setFieldErrors(p => ({ ...p, fullName: null }));
+                }}
+                required
+                aria-required="true"
+                disabled={loading}
+              />
+            </div>
+            {fieldErrors.fullName && <span className="field-error">{fieldErrors.fullName}</span>}
+          </div>
+
+          {/* Username */}
+          <div className="field-group">
+            <label className="field-label" htmlFor="cp-username">Username</label>
+            <div className="input-wrapper">
+              <input
+                id="cp-username"
+                className={`form-input ${
+                  fieldErrors.username || usernameStatus === 'taken' || usernameStatus === 'invalid'
+                    ? 'form-input--error'
+                    : usernameStatus === 'available'
+                    ? 'form-input--success'
+                    : ''
+                }`}
+                type="text"
+                autoComplete="username"
+                placeholder="jane_doe"
+                value={username}
+                onChange={handleUsernameChange}
+                required
+                aria-required="true"
+                aria-describedby="username-status-msg"
+                disabled={loading}
+                style={usernameStatus === 'available' ? { borderColor: '#10B981' } : {}}
+              />
+            </div>
+
+            {/* Availability indicator */}
+            <div
+              id="username-status-msg"
+              className={`username-status ${usernameStatus !== 'idle' ? usernameStatusClass : ''}`}
+              aria-live="polite"
+            >
+              {usernameStatus === 'checking' && (
+                <><span className="username-checking-dot" />{STATUS_MSG.checking}</>
+              )}
+              {usernameStatus === 'available' && (
+                <><CheckIcon size={12} />{STATUS_MSG.available}</>
+              )}
+              {usernameStatus === 'taken' && (
+                <><XIcon size={12} />{STATUS_MSG.taken}</>
+              )}
+              {usernameStatus === 'invalid' && (
+                <><XIcon size={12} />{STATUS_MSG.invalid}</>
+              )}
+            </div>
+
+            {fieldErrors.username && (
+              <span className="field-error">{fieldErrors.username}</span>
+            )}
+          </div>
+
+          {/* Password section (for OAuth users) */}
+          {isOAuthUser && (
+            <>
+              <button
+                type="button"
+                className="pw-section-toggle"
+                onClick={() => setShowPwSection(v => !v)}
+                aria-expanded={showPwSection}
+              >
+                <span className="pw-section-toggle-icon">
+                  <LockIcon />
+                </span>
+                Set a password
+                <span className="pw-optional-badge">Optional</span>
+                <span className={`pw-section-toggle-chevron ${showPwSection ? 'pw-section-toggle-chevron--open' : ''}`}>
+                  <ChevronDown />
+                </span>
+              </button>
+
+              {showPwSection && (
+                <div className="pw-section-body">
+                  {/* Password */}
+                  <div className="field-group" style={{ marginBottom: 0 }}>
+                    <label className="field-label" htmlFor="cp-password">Password</label>
+                    <div className="input-wrapper" style={{ position: 'relative' }}>
+                      <input
+                        id="cp-password"
+                        className={`form-input ${fieldErrors.password ? 'form-input--error' : ''}`}
+                        type={showPwd ? 'text' : 'password'}
+                        autoComplete="new-password"
+                        placeholder="••••••••••"
+                        value={password}
+                        onChange={e => {
+                          setPassword(e.target.value);
+                          setFieldErrors(p => ({ ...p, password: null }));
+                        }}
+                        style={{ paddingRight: '48px' }}
+                        disabled={loading}
+                      />
+                      <button
+                        type="button"
+                        className="pwd-toggle-btn"
+                        onClick={() => setShowPwd(v => !v)}
+                        aria-label={showPwd ? 'Hide password' : 'Show password'}
+                        disabled={loading}
+                      >
+                        <EyeIcon show={showPwd} />
+                      </button>
+                    </div>
+
+                    {/* Strength bar */}
+                    {password && (
+                      <div className="pw-strength">
+                        <div className="pw-bar-track">
+                          <div className="pw-bar-fill" style={{
+                            width: `${(strength.level / 3) * 100}%`,
+                            background: strength.color,
+                          }} />
+                        </div>
+                        <span className="pw-strength-label" style={{ color: strength.color }}>
+                          {strength.label}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Rules */}
+                    {password && (
+                      <ul className="pw-rules">
+                        {PW_RULES.map(r => (
+                          <li key={r.id} className={`pw-rule ${r.test(password) ? 'pw-rule--pass' : ''}`}>
+                            {r.test(password) ? <CheckIcon /> : <XIcon />}
+                            {r.label}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {fieldErrors.password && (
+                      <span className="field-error">{fieldErrors.password}</span>
+                    )}
+                  </div>
+
+                  {/* Confirm Password */}
+                  <div className="field-group" style={{ marginBottom: 0 }}>
+                    <label className="field-label" htmlFor="cp-confirm">Confirm Password</label>
+                    <div className="input-wrapper">
+                      <input
+                        id="cp-confirm"
+                        className={`form-input ${fieldErrors.confirmPwd ? 'form-input--error' : ''}`}
+                        type="password"
+                        autoComplete="new-password"
+                        placeholder="••••••••••"
+                        value={confirmPwd}
+                        onChange={e => {
+                          setConfirmPwd(e.target.value);
+                          setFieldErrors(p => ({ ...p, confirmPwd: null }));
+                        }}
+                        disabled={loading}
+                      />
+                    </div>
+                    {fieldErrors.confirmPwd && (
+                      <span className="field-error">{fieldErrors.confirmPwd}</span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Error banner */}
+          {error && (
+            <div className="form-error" role="alert" aria-live="assertive">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              {error}
+            </div>
+          )}
+
+          {/* Submit */}
+          <button
+            id="complete-profile-btn"
+            type="submit"
+            className="btn-primary"
+            disabled={loading || usernameStatus === 'checking'}
+            aria-busy={loading}
+            style={{ marginTop: 'var(--space-sm)' }}
+          >
+            {loading ? (
+              <><span className="spinner" aria-hidden="true" />Saving Profile…</>
+            ) : 'Complete Profile & Enter'}
+          </button>
+
+          {/* Skip option for OAuth users (password is already optional but they might want to skip username change) */}
+          {isOAuthUser && (
+            <p className="onboarding-skip">
+              You can update your profile later in settings.
+            </p>
+          )}
+
+        </form>
+      </div>
+
+      {/* ── Footer ── */}
+      <footer className="login-footer">
+        <p>
+          © 2026 CodeCall Inc. &nbsp;·&nbsp;
+          <a href="#privacy">Privacy</a> &nbsp;·&nbsp;
+          <a href="#terms">Terms</a>
+        </p>
+      </footer>
+
+    </main>
+  );
+}

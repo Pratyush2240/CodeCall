@@ -6,6 +6,9 @@ import {
   forgotPassword,
   resetPassword,
   oauthLogin,
+  getMe,
+  checkUsernameAvailable,
+  completeProfile,
 } from "./auth.service.js";
 
 import { env } from "../../config/env.js";
@@ -13,6 +16,7 @@ import catchAsync from "../../utils/catchAsync.js";
 
 /**
  * REGISTER — auto-login on success
+ * Email/password users are marked isProfileComplete: true → redirect to /dashboard
  */
 export const register = catchAsync(async (req, res) => {
   const result = await registerUser(req.body);
@@ -27,11 +31,12 @@ export const register = catchAsync(async (req, res) => {
 
 /**
  * LOGIN
+ * Returns isProfileComplete so the frontend knows where to redirect.
  */
 export const login = catchAsync(async (req, res) => {
   const { email, password } = req.body;
 
-  const { accessToken, refreshToken } = await loginUser({
+  const { accessToken, refreshToken, isProfileComplete } = await loginUser({
     email,
     password,
   });
@@ -40,6 +45,7 @@ export const login = catchAsync(async (req, res) => {
     status: "success",
     accessToken,
     refreshToken,
+    isProfileComplete,
   });
 });
 
@@ -100,16 +106,59 @@ export const resetPwd = catchAsync(async (req, res) => {
 });
 
 /**
+ * GET ME
+ * Returns the authenticated user's profile including isProfileComplete.
+ */
+export const getMeCtrl = catchAsync(async (req, res) => {
+  const user = await getMe(req.user.id);
+
+  res.status(200).json({
+    status: "success",
+    data: user,
+  });
+});
+
+/**
+ * CHECK USERNAME
+ * GET /auth/check-username/:username
+ * Returns { available: boolean }
+ */
+export const checkUsernameCtrl = catchAsync(async (req, res) => {
+  const result = await checkUsernameAvailable(req.params.username);
+
+  res.status(200).json({
+    status: "success",
+    ...result,
+  });
+});
+
+/**
+ * COMPLETE PROFILE
+ * POST /auth/complete-profile
+ * Finalises onboarding for OAuth (and any incomplete) users.
+ */
+export const completeProfileCtrl = catchAsync(async (req, res) => {
+  const { fullName, username, password } = req.body;
+
+  const user = await completeProfile(req.user.id, { fullName, username, password });
+
+  res.status(200).json({
+    status: "success",
+    data: user,
+  });
+});
+
+/**
  * GITHUB OAUTH CALLBACK
- * Called by Passport after it has resolved the GitHub user.
- * Generates JWT tokens and redirects to the frontend OAuthCallback page.
+ * Redirects to /complete-profile for new users, /dashboard for returning users.
  */
 export const githubCallback = async (req, res) => {
   try {
-    const { accessToken, refreshToken } = await oauthLogin(req.user);
+    const { accessToken, refreshToken, isNewUser } = await oauthLogin(req.user);
     const clientUrl = env.CLIENT_URL || "http://localhost:5173";
+    const newParam = isNewUser ? "&new=1" : "";
     return res.redirect(
-      `${clientUrl}/oauth/callback?token=${encodeURIComponent(accessToken)}&refresh=${encodeURIComponent(refreshToken)}`
+      `${clientUrl}/oauth/callback?token=${encodeURIComponent(accessToken)}&refresh=${encodeURIComponent(refreshToken)}${newParam}`
     );
   } catch (err) {
     console.error("[OAuth] GitHub callback error:", err.message);
@@ -120,15 +169,15 @@ export const githubCallback = async (req, res) => {
 
 /**
  * GOOGLE OAUTH CALLBACK
- * Called by Passport after it has resolved the Google user.
- * Generates JWT tokens and redirects to the frontend OAuthCallback page.
+ * Redirects to /complete-profile for new users, /dashboard for returning users.
  */
 export const googleCallback = async (req, res) => {
   try {
-    const { accessToken, refreshToken } = await oauthLogin(req.user);
+    const { accessToken, refreshToken, isNewUser } = await oauthLogin(req.user);
     const clientUrl = env.CLIENT_URL || "http://localhost:5173";
+    const newParam = isNewUser ? "&new=1" : "";
     return res.redirect(
-      `${clientUrl}/oauth/callback?token=${encodeURIComponent(accessToken)}&refresh=${encodeURIComponent(refreshToken)}`
+      `${clientUrl}/oauth/callback?token=${encodeURIComponent(accessToken)}&refresh=${encodeURIComponent(refreshToken)}${newParam}`
     );
   } catch (err) {
     console.error("[OAuth] Google callback error:", err.message);

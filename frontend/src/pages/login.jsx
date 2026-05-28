@@ -79,10 +79,12 @@ export default function LoginPage() {
 
     try {
       const response = await API.post('/auth/login', { email, password });
-      const { accessToken, refreshToken } = response.data;
+      const { accessToken, refreshToken, isProfileComplete } = response.data;
       if (accessToken)  localStorage.setItem('accessToken', accessToken);
       if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
-      navigate('/dashboard');
+
+      // Route based on profile completion status
+      navigate(isProfileComplete ? '/dashboard' : '/complete-profile');
     } catch (err) {
       const message =
         err.response?.data?.message ??

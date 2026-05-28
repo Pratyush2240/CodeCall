@@ -98,8 +98,9 @@ export default function SignupPage() {
 
     try {
       const res = await API.post('/auth/register', form);
-      const { accessToken } = res.data;
-      if (accessToken) localStorage.setItem('accessToken', accessToken);
+      const { accessToken, refreshToken } = res.data;
+      if (accessToken)  localStorage.setItem('accessToken', accessToken);
+      if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
       navigate('/dashboard');
     } catch (err) {
       const msg = err.response?.data?.message ?? 'Registration failed. Please try again.';

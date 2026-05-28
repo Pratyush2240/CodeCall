@@ -53,7 +53,9 @@ export const requireAuth = async (req, res, next) => {
     // 4️⃣ Attach user to request
     req.user = {
       id: user.id,
-      role: user.role
+      role: user.role,
+      isProfileComplete: user.isProfileComplete,
+      isOAuthUser: user.isOAuthUser,
     };
 
     next();

@@ -5,14 +5,9 @@ import './Login.css';
 /**
  * OAuthCallback
  *
- * Landing page for /oauth/callback — the backend redirects here after a
- * successful OAuth flow with `?token=<AT>&refresh=<RT>` in the URL.
- *
- * This page:
- *   1. Reads tokens from search params
- *   2. Persists them to localStorage (same pattern as email/password login)
- *   3. Redirects to the dashboard
- *   4. On any error, redirects to /login?error=oauth_failed
+ * Landing page for /oauth/callback — the backend redirects here with:
+ *   ?token=<AT>&refresh=<RT>        → returning user → /dashboard
+ *   ?token=<AT>&refresh=<RT>&new=1  → new user       → /complete-profile
  */
 export default function OAuthCallbackPage() {
   const [searchParams] = useSearchParams();
@@ -22,9 +17,9 @@ export default function OAuthCallbackPage() {
   useEffect(() => {
     const token   = searchParams.get('token');
     const refresh = searchParams.get('refresh');
+    const isNew   = searchParams.get('new') === '1';
 
     if (!token || !refresh) {
-      // Missing tokens — treat as failure
       setStatus('Authentication failed. Redirecting…');
       const t = setTimeout(() => navigate('/login?error=oauth_failed', { replace: true }), 1500);
       return () => clearTimeout(t);
@@ -33,10 +28,15 @@ export default function OAuthCallbackPage() {
     try {
       localStorage.setItem('accessToken', token);
       localStorage.setItem('refreshToken', refresh);
-      setStatus('Authenticated! Redirecting to dashboard…');
-      navigate('/dashboard', { replace: true });
+
+      if (isNew) {
+        setStatus('Account created! Setting up your profile…');
+        navigate('/complete-profile', { replace: true });
+      } else {
+        setStatus('Welcome back! Redirecting to dashboard…');
+        navigate('/dashboard', { replace: true });
+      }
     } catch {
-      // Storage might be blocked (private browsing, etc.)
       setStatus('Unable to save session. Redirecting…');
       const t = setTimeout(() => navigate('/login?error=oauth_failed', { replace: true }), 1500);
       return () => clearTimeout(t);
@@ -46,7 +46,6 @@ export default function OAuthCallbackPage() {
   return (
     <main className="login-page" role="main" aria-label="OAuth authentication callback">
       <div className="oauth-callback-card">
-        {/* Animated logo */}
         <div className="oauth-spinner-wrapper" aria-hidden="true">
           <span className="oauth-ring" />
         </div>

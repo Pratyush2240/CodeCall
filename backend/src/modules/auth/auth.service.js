@@ -16,14 +16,38 @@ const hashToken = (token) =>
   crypto.createHash("sha256").update(token).digest("hex");
 
 /**
+ * Utility: Normalise username — lowercase, strip invalid chars
+ */
+const normaliseUsername = (u) =>
+  u.toLowerCase().trim();
+
+// ─── Reserved usernames ───────────────────────────────────────────────────────
+const RESERVED_USERNAMES = new Set([
+  "admin", "root", "support", "help", "api", "auth", "login", "logout",
+  "signup", "register", "dashboard", "settings", "profile", "me", "user",
+  "users", "codecall", "system", "null", "undefined", "anonymous", "guest",
+]);
+
+/**
  * ================================
  * REGISTER USER
  * ================================
+ * Email/password users are marked isProfileComplete: true immediately —
+ * they already provided all required info during signup.
  */
 export const registerUser = async ({ fullName, username, email, password }) => {
+  const normUsername = normaliseUsername(username);
+
+  if (RESERVED_USERNAMES.has(normUsername)) {
+    throw new AppError("This username is reserved.", 400);
+  }
+
   const existingUser = await prisma.user.findFirst({
     where: {
-      OR: [{ email }, { username }]
+      OR: [
+        { email },
+        { username: { equals: normUsername, mode: "insensitive" } }
+      ]
     }
   });
 
@@ -39,9 +63,11 @@ export const registerUser = async ({ fullName, username, email, password }) => {
   const user = await prisma.user.create({
     data: {
       fullName: fullName?.trim() || null,
-      username,
+      username: normUsername,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      isProfileComplete: true,  // email users complete signup in one step
+      hasPassword: true,
     }
   });
 
@@ -73,7 +99,8 @@ export const registerUser = async ({ fullName, username, email, password }) => {
       fullName: user.fullName,
       username: user.username,
       email: user.email,
-      role: user.role
+      role: user.role,
+      isProfileComplete: user.isProfileComplete,
     },
     accessToken,
     refreshToken,
@@ -96,7 +123,9 @@ export const loginUser = async ({ email, password }) => {
 
   // OAuth-only users have no password — direct them to OAuth login
   if (!user.password) {
-    const provider = user.provider ? `${user.provider.charAt(0).toUpperCase() + user.provider.slice(1)}` : "OAuth";
+    const provider = user.provider
+      ? `${user.provider.charAt(0).toUpperCase() + user.provider.slice(1)}`
+      : "OAuth";
     throw new AppError(
       `This account uses ${provider} to sign in. Please use the ${provider} login button.`,
       401
@@ -130,7 +159,11 @@ export const loginUser = async ({ email, password }) => {
     }
   });
 
-  return { accessToken, refreshToken };
+  return {
+    accessToken,
+    refreshToken,
+    isProfileComplete: user.isProfileComplete,
+  };
 };
 
 /**
@@ -256,8 +289,6 @@ export const forgotPassword = async (email) => {
     },
   });
 
-  // In production, send email here via Nodemailer.
-  // For now, log the reset link for development.
   const resetUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password/${rawToken}`;
 
   // Send the email
@@ -265,7 +296,6 @@ export const forgotPassword = async (email) => {
     await sendResetEmail(email, resetUrl);
   } catch (err) {
     console.error("[mail] Failed to send reset email:", err.message);
-    // Still return success to prevent enumeration
   }
 
   return { message: "If that email exists, a reset link has been sent." };
@@ -305,7 +335,7 @@ export const resetPassword = async (token, newPassword) => {
   await prisma.$transaction([
     prisma.user.update({
       where: { id: resetRecord.userId },
-      data: { password: hashedPassword },
+      data: { password: hashedPassword, hasPassword: true },
     }),
     prisma.passwordResetToken.update({
       where: { id: resetRecord.id },
@@ -325,10 +355,10 @@ export const resetPassword = async (token, newPassword) => {
  * OAUTH LOGIN — issue JWT for resolved OAuth user
  * ================================
  * Called after Passport has already resolved/created the user from the provider.
- * Generates and stores tokens using the same rotation pattern as local auth.
+ * Returns isNewUser so the controller can redirect new users to /complete-profile.
  *
  * @param {object} user - Prisma User record resolved by Passport strategy
- * @returns {{ accessToken: string, refreshToken: string }}
+ * @returns {{ accessToken, refreshToken, isNewUser }}
  */
 export const oauthLogin = async (user) => {
   const accessToken = generateAccessToken({
@@ -352,5 +382,121 @@ export const oauthLogin = async (user) => {
     },
   });
 
-  return { accessToken, refreshToken };
+  // isNewUser = user has not yet completed the onboarding profile step
+  return {
+    accessToken,
+    refreshToken,
+    isNewUser: !user.isProfileComplete,
+  };
+};
+
+/**
+ * ================================
+ * GET ME — return current user profile
+ * ================================
+ */
+export const getMe = async (userId) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      fullName: true,
+      role: true,
+      avatar: true,
+      isOAuthUser: true,
+      provider: true,
+      isProfileComplete: true,
+      hasPassword: true,
+      createdAt: true,
+    },
+  });
+
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  return user;
+};
+
+/**
+ * ================================
+ * CHECK USERNAME AVAILABILITY
+ * ================================
+ */
+export const checkUsernameAvailable = async (username) => {
+  const norm = normaliseUsername(username);
+
+  // Format validation
+  if (!/^[a-z0-9_]{3,30}$/.test(norm)) {
+    return { available: false, reason: "Invalid format" };
+  }
+
+  if (RESERVED_USERNAMES.has(norm)) {
+    return { available: false, reason: "Reserved username" };
+  }
+
+  const existing = await prisma.user.findFirst({
+    where: { username: { equals: norm, mode: "insensitive" } },
+  });
+
+  return { available: !existing };
+};
+
+/**
+ * ================================
+ * COMPLETE PROFILE
+ * ================================
+ * Called during onboarding for OAuth users (or anyone with isProfileComplete: false).
+ * Sets fullName, username, optional password, and marks profile complete.
+ */
+export const completeProfile = async (userId, { fullName, username, password }) => {
+  const normUsername = normaliseUsername(username);
+
+  if (RESERVED_USERNAMES.has(normUsername)) {
+    throw new AppError("This username is reserved.", 400);
+  }
+
+  // Check uniqueness — exclude the current user
+  const conflict = await prisma.user.findFirst({
+    where: {
+      username: { equals: normUsername, mode: "insensitive" },
+      NOT: { id: userId },
+    },
+  });
+
+  if (conflict) {
+    throw new AppError("This username is already taken.", 400);
+  }
+
+  const updateData = {
+    fullName: fullName?.trim() || null,
+    username: normUsername,
+    isProfileComplete: true,
+  };
+
+  // Optionally set password for OAuth users
+  if (password) {
+    updateData.password = await hashPassword(password);
+    updateData.hasPassword = true;
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: updateData,
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      fullName: true,
+      role: true,
+      avatar: true,
+      isOAuthUser: true,
+      isProfileComplete: true,
+      hasPassword: true,
+    },
+  });
+
+  return updated;
 };

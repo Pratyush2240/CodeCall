@@ -68,16 +68,15 @@ async function generateUniqueUsername(displayName) {
  */
 async function resolveOAuthUser(provider, providerId, email, displayName, avatar, done) {
   try {
-    // 1. Look up by provider + providerId (existing OAuth user)
+    // 1. Look up by provider + providerId (existing OAuth user — returning login)
     const existingOAuth = await prisma.user.findUnique({
       where: {
-        // Prisma generates this compound unique field name from @@unique([provider, providerId])
         provider_providerId: { provider, providerId },
       },
     });
 
     if (existingOAuth) {
-      // Update avatar in case it changed
+      // Update avatar in case it changed; keep isProfileComplete as-is
       const updated = await prisma.user.update({
         where: { id: existingOAuth.id },
         data: { avatar },
@@ -90,7 +89,8 @@ async function resolveOAuthUser(provider, providerId, email, displayName, avatar
       const existingByEmail = await prisma.user.findUnique({ where: { email } });
 
       if (existingByEmail) {
-        // Link the OAuth provider to the existing account
+        // Link the OAuth provider to the existing account.
+        // Local account is already complete — preserve isProfileComplete.
         const linked = await prisma.user.update({
           where: { id: existingByEmail.id },
           data: { provider, providerId, avatar, isOAuthUser: true },
@@ -99,7 +99,7 @@ async function resolveOAuthUser(provider, providerId, email, displayName, avatar
       }
     }
 
-    // 3. Create a brand-new OAuth user
+    // 3. Create a brand-new OAuth user — profile is NOT yet complete
     const username = await generateUniqueUsername(displayName);
 
     const newUser = await prisma.user.create({
@@ -107,11 +107,13 @@ async function resolveOAuthUser(provider, providerId, email, displayName, avatar
         username,
         email: email || null,
         fullName: displayName || null,
-        password: null,          // OAuth users have no password
+        password: null,           // OAuth users have no password initially
         provider,
         providerId,
         avatar,
         isOAuthUser: true,
+        isProfileComplete: false, // must complete onboarding
+        hasPassword: false,
       },
     });
 

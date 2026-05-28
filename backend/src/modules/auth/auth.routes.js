@@ -9,6 +9,9 @@ import {
   resetPwd,
   githubCallback,
   googleCallback,
+  getMeCtrl,
+  checkUsernameCtrl,
+  completeProfileCtrl,
 } from "./auth.controller.js";
 
 import { requireAuth } from "../../middlewares/requireAuth.js";
@@ -18,6 +21,7 @@ import {
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  completeProfileSchema,
 } from "./auth.validation.js";
 import { authLimiter } from "../../middlewares/rateLimiter.js";
 
@@ -60,6 +64,20 @@ router.post(
  * ─── Protected Routes ──────────────────────────────────────────────────────
  */
 router.post("/logout", requireAuth, logout);
+
+// GET /api/auth/me — returns current user profile + isProfileComplete
+router.get("/me", requireAuth, getMeCtrl);
+
+// GET /api/auth/check-username/:username — username availability check
+router.get("/check-username/:username", requireAuth, checkUsernameCtrl);
+
+// POST /api/auth/complete-profile — finalise onboarding
+router.post(
+  "/complete-profile",
+  requireAuth,
+  validate(completeProfileSchema),
+  completeProfileCtrl
+);
 
 /**
  * ─── GitHub OAuth ───────────────────────────────────────────────────────────
