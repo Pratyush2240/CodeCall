@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import API from '../api/axios';
 import './Login.css';
 import './Signup.css';
+import { useUser } from '../context/UserContext';
 
 /* ─── Icons ─────────────────────────────────────────── */
 const TerminalIcon = () => (
@@ -60,6 +61,7 @@ function getStrength(pw) {
 /* ─── Component ──────────────────────────────────── */
 export default function SignupPage() {
   const navigate = useNavigate();
+  const { refetch } = useUser();
 
   const [form, setForm] = useState({
     fullName: '', username: '', email: '', password: '', confirmPassword: '',
@@ -100,6 +102,7 @@ export default function SignupPage() {
       const res = await API.post('/auth/register', form);
       const { accessToken } = res.data;
       if (accessToken) localStorage.setItem('accessToken', accessToken);
+      await refetch();
       navigate('/dashboard');
     } catch (err) {
       const msg = err.response?.data?.message ?? 'Registration failed. Please try again.';

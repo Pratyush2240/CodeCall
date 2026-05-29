@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import RoomCard from '../components/RoomCard';
+import { useUser } from '../context/UserContext';
 import { createRoom, joinRoom, getRooms } from '../api/rooms';
 import './Dashboard.css';
 
@@ -40,6 +41,12 @@ const SpinnerIcon = () => (
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const { user }  = useUser();
+
+  // Derive first name for greeting
+  const firstName = user?.fullName
+    ? user.fullName.trim().split(' ')[0]
+    : user?.username || 'there';
 
   /* ── State ── */
   const [roomCode, setRoomCode]           = useState('');
@@ -125,9 +132,9 @@ export default function DashboardPage() {
           <div className="dashboard-heading">
             <h1 className="dashboard-title">Workspace Dashboard</h1>
             <p className="dashboard-welcome">
-              Welcome back. You have{' '}
+              Welcome back, <strong style={{ color: 'var(--color-accent)' }}>{firstName}</strong>. You have{' '}
               <strong style={{ color: 'var(--color-accent)' }}>
-                {recentRooms.filter(r => r.status === 'active').length} active rooms
+                {recentRooms.filter(r => r.status === 'ACTIVE' || r.status === 'active').length} active rooms
               </strong>{' '}
               today.
             </p>

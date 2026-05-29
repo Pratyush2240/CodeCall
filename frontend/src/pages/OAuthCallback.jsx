@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import './Login.css';
+import { useUser } from '../context/UserContext';
 
 /**
  * OAuthCallback
@@ -18,6 +19,7 @@ export default function OAuthCallbackPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [status, setStatus] = useState('Processing authentication…');
+  const { refetch } = useUser();
 
   useEffect(() => {
     const token   = searchParams.get('token');
@@ -34,14 +36,18 @@ export default function OAuthCallbackPage() {
       localStorage.setItem('accessToken', token);
       localStorage.setItem('refreshToken', refresh);
       setStatus('Authenticated! Redirecting to dashboard…');
-      navigate('/dashboard', { replace: true });
+      refetch().then(() => {
+        navigate('/dashboard', { replace: true });
+      }).catch(() => {
+        navigate('/login?error=oauth_failed', { replace: true });
+      });
     } catch {
       // Storage might be blocked (private browsing, etc.)
       setStatus('Unable to save session. Redirecting…');
       const t = setTimeout(() => navigate('/login?error=oauth_failed', { replace: true }), 1500);
       return () => clearTimeout(t);
     }
-  }, [navigate, searchParams]);
+  }, [navigate, searchParams, refetch]);
 
   return (
     <main className="login-page" role="main" aria-label="OAuth authentication callback">

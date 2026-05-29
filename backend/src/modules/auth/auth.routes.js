@@ -9,6 +9,9 @@ import {
   resetPwd,
   githubCallback,
   googleCallback,
+  getMe,
+  checkUsername,
+  completeProfile,
 } from "./auth.controller.js";
 
 import { requireAuth } from "../../middlewares/requireAuth.js";
@@ -60,6 +63,9 @@ router.post(
  * ─── Protected Routes ──────────────────────────────────────────────────────
  */
 router.post("/logout", requireAuth, logout);
+router.get("/me", requireAuth, getMe);
+router.get("/check-username/:username", requireAuth, checkUsername);
+router.post("/complete-profile", requireAuth, completeProfile);
 
 /**
  * ─── GitHub OAuth ───────────────────────────────────────────────────────────
@@ -68,15 +74,30 @@ router.post("/logout", requireAuth, logout);
  */
 router.get(
   "/github",
-  passport.authenticate("github", { session: false, scope: ["user:email"] })
+  (req, res, next) => {
+    const { state } = req.query;
+    passport.authenticate("github", {
+      session: false,
+      scope: ["user:email"],
+      state: state
+    })(req, res, next);
+  }
 );
 
 router.get(
   "/github/callback",
-  passport.authenticate("github", {
-    session: false,
-    failureRedirect: `${process.env.CLIENT_URL || "http://localhost:5173"}/login?error=oauth_failed`,
-  }),
+  (req, res, next) => {
+    const isLinking = !!req.query.state;
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    const failureRedirect = isLinking
+      ? `${clientUrl}/settings?error=already_connected`
+      : `${clientUrl}/login?error=oauth_failed`;
+
+    passport.authenticate("github", {
+      session: false,
+      failureRedirect
+    })(req, res, next);
+  },
   githubCallback
 );
 
@@ -87,15 +108,30 @@ router.get(
  */
 router.get(
   "/google",
-  passport.authenticate("google", { session: false, scope: ["profile", "email"] })
+  (req, res, next) => {
+    const { state } = req.query;
+    passport.authenticate("google", {
+      session: false,
+      scope: ["profile", "email"],
+      state: state
+    })(req, res, next);
+  }
 );
 
 router.get(
   "/google/callback",
-  passport.authenticate("google", {
-    session: false,
-    failureRedirect: `${process.env.CLIENT_URL || "http://localhost:5173"}/login?error=oauth_failed`,
-  }),
+  (req, res, next) => {
+    const isLinking = !!req.query.state;
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    const failureRedirect = isLinking
+      ? `${clientUrl}/settings?error=already_connected`
+      : `${clientUrl}/login?error=oauth_failed`;
+
+    passport.authenticate("google", {
+      session: false,
+      failureRedirect
+    })(req, res, next);
+  },
   googleCallback
 );
 

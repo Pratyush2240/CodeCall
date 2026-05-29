@@ -1,5 +1,6 @@
 import prisma from "../../config/prisma.js";
 import { hashPassword, comparePassword } from "../../utils/hash.js";
+import { RESERVED_USERNAMES, getUserProfile } from "../user/user.service.js";
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -41,7 +42,9 @@ export const registerUser = async ({ fullName, username, email, password }) => {
       fullName: fullName?.trim() || null,
       username,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      isProfileComplete: true,
+      hasPassword: true
     }
   });
 
@@ -353,4 +356,84 @@ export const oauthLogin = async (user) => {
   });
 
   return { accessToken, refreshToken };
+};
+
+/**
+ * ================================
+ * CHECK USERNAME AVAILABILITY
+ * ================================
+ */
+export const checkUsernameAvailability = async (username, excludeUserId = null) => {
+  const norm = username?.toLowerCase().trim();
+  if (!norm || norm.length < 3 || norm.length > 30) return false;
+  if (!/^[a-z0-9_]{3,30}$/.test(norm)) return false;
+  if (RESERVED_USERNAMES.has(norm)) return false;
+
+  const conflict = await prisma.user.findFirst({
+    where: {
+      username: { equals: norm, mode: "insensitive" },
+      ...(excludeUserId && { NOT: { id: excludeUserId } }),
+    },
+  });
+
+  return !conflict;
+};
+
+/**
+ * ================================
+ * COMPLETE PROFILE (OAuth Onboarding)
+ * ================================
+ */
+export const completeUserProfile = async (userId, { fullName, username, password, confirmPassword }) => {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new AppError("User not found", 404);
+
+  const normUsername = username?.toLowerCase().trim();
+  if (!normUsername || normUsername.length < 3) {
+    throw new AppError("Username must be at least 3 characters.", 400);
+  }
+  if (!/^[a-z0-9_]{3,30}$/.test(normUsername)) {
+    throw new AppError("Letters, numbers, and underscores only (3–30 chars).", 400);
+  }
+  if (RESERVED_USERNAMES.has(normUsername)) {
+    throw new AppError("This username is reserved.", 400);
+  }
+
+  // Check uniqueness (exclude current user)
+  const conflict = await prisma.user.findFirst({
+    where: {
+      username: { equals: normUsername, mode: "insensitive" },
+      NOT: { id: userId },
+    },
+  });
+  if (conflict) {
+    throw new AppError("This username is already taken.", 400);
+  }
+
+  if (!fullName || fullName.trim().length < 2) {
+    throw new AppError("Full name must be at least 2 characters.", 400);
+  }
+
+  let hashedPassword = undefined;
+  if (password) {
+    if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+      throw new AppError("Meet all password requirements.", 400);
+    }
+    if (password !== confirmPassword) {
+      throw new AppError("Passwords do not match.", 400);
+    }
+    hashedPassword = await hashPassword(password);
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      fullName: fullName.trim(),
+      username: normUsername,
+      isProfileComplete: true,
+      ...(hashedPassword && { password: hashedPassword, hasPassword: true }),
+    },
+  });
+
+  return updatedUser;
 };
