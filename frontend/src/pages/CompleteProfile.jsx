@@ -72,7 +72,6 @@ export default function CompleteProfilePage() {
   /* User data derived from global context */
   const oauthAvatar = user?.avatar || null;
   const oauthFullName = user?.fullName || '';
-  const isOAuthUser = !!user?.isOAuthUser;
 
   /* Form state */
   const [fullName, setFullName]           = useState('');
