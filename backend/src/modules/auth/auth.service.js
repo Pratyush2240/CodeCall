@@ -87,21 +87,31 @@ export const registerUser = async ({ fullName, username, email, password }) => {
  * ================================
  * LOGIN USER
  * ================================
+ * Supports login via email OR username.
+ * Hybrid auth: OAuth users who have set a password can also log in
+ * with credentials. Only blocks password login if no password exists.
  */
-export const loginUser = async ({ email, password }) => {
-  const user = await prisma.user.findUnique({
-    where: { email }
+export const loginUser = async ({ identifier, password }) => {
+  // Determine whether the identifier is an email or username
+  const isEmail = identifier.includes("@");
+
+  const user = await prisma.user.findFirst({
+    where: isEmail
+      ? { email: identifier }
+      : { username: { equals: identifier, mode: "insensitive" } },
   });
 
   if (!user) {
     throw new AppError("Invalid credentials", 401);
   }
 
-  // OAuth-only users have no password — direct them to OAuth login
+  // If this account has no password at all, direct them to OAuth
   if (!user.password) {
-    const provider = user.provider ? `${user.provider.charAt(0).toUpperCase() + user.provider.slice(1)}` : "OAuth";
+    const provider = user.provider
+      ? `${user.provider.charAt(0).toUpperCase() + user.provider.slice(1)}`
+      : "OAuth";
     throw new AppError(
-      `This account uses ${provider} to sign in. Please use the ${provider} login button.`,
+      `This account does not have a password configured. Please sign in using ${provider}.`,
       401
     );
   }
@@ -414,16 +424,16 @@ export const completeUserProfile = async (userId, { fullName, username, password
     throw new AppError("Full name must be at least 2 characters.", 400);
   }
 
-  let hashedPassword = undefined;
-  if (password) {
-    if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
-      throw new AppError("Meet all password requirements.", 400);
-    }
-    if (password !== confirmPassword) {
-      throw new AppError("Passwords do not match.", 400);
-    }
-    hashedPassword = await hashPassword(password);
+  if (!password || !confirmPassword) {
+    throw new AppError("Password and confirm password are required.", 400);
   }
+  if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+    throw new AppError("Meet all password requirements.", 400);
+  }
+  if (password !== confirmPassword) {
+    throw new AppError("Passwords do not match.", 400);
+  }
+  const hashedPassword = await hashPassword(password);
 
   const updatedUser = await prisma.user.update({
     where: { id: userId },
@@ -431,7 +441,8 @@ export const completeUserProfile = async (userId, { fullName, username, password
       fullName: fullName.trim(),
       username: normUsername,
       isProfileComplete: true,
-      ...(hashedPassword && { password: hashedPassword, hasPassword: true }),
+      password: hashedPassword,
+      hasPassword: true,
     },
   });
 

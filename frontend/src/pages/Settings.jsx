@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { useUser, getAvatarMeta } from '../context/UserContext';
-import { updateProfile, changePassword } from '../api/users';
+import { updateProfile, changePassword, deleteAccount } from '../api/users';
 import API from '../api/axios';
 import './Settings.css';
 
@@ -82,6 +82,16 @@ const GoogleIcon = () => (
   </svg>
 );
 
+const TrashIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    <line x1="10" y1="11" x2="10" y2="17" />
+    <line x1="14" y1="11" x2="14" y2="17" />
+  </svg>
+);
+
 /* ── Password strength ── */
 const PW_RULES = [
   { id: 'len',   test: (p) => p.length >= 8,    label: '8+ characters' },
@@ -148,6 +158,13 @@ export default function SettingsPage() {
   const [pwSaving, setPwSaving]       = useState(false);
   const [pwSuccess, setPwSuccess]     = useState(false);
   const [pwError, setPwError]         = useState('');
+
+  /* --- Deletion section state --- */
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deletePwd, setDeletePwd]                 = useState('');
+  const [showDeletePwd, setShowDeletePwd]         = useState(false);
+  const [deleteLoading, setDeleteLoading]         = useState(false);
+  const [deleteError, setDeleteError]             = useState('');
 
   /* Populate fields from user context */
   useEffect(() => {
@@ -242,6 +259,29 @@ export default function SettingsPage() {
       setPwError(err.response?.data?.message ?? 'Failed to change password.');
     } finally {
       setPwSaving(false);
+    }
+  };
+
+  /* ── Delete Account ── */
+  const handleDeleteAccount = async (e) => {
+    e.preventDefault();
+    if (user?.hasPassword && !deletePwd) {
+      setDeleteError('Please enter your password to confirm deletion.');
+      return;
+    }
+
+    setDeleteLoading(true);
+    setDeleteError('');
+    try {
+      await deleteAccount(user?.hasPassword ? deletePwd : undefined);
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.setItem('account_deleted', 'true');
+      window.location.href = '/login';
+    } catch (err) {
+      setDeleteError(err.response?.data?.message ?? 'Failed to delete account. Please try again.');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -624,6 +664,134 @@ export default function SettingsPage() {
               {pwSaving ? 'Updating…' : user?.hasPassword ? 'Change Password' : 'Set Password'}
             </button>
           </form>
+        </div>
+
+        {/* ══════════════════════════════════════════
+            SECTION 4 — Danger Zone (Account Deletion)
+        ══════════════════════════════════════════ */}
+        <div className="settings-card settings-card--danger" style={{ border: '1px solid #FEE2E2', background: '#FEF2F2' }}>
+          <div className="settings-card-header">
+            <div className="settings-card-icon settings-card-icon--red" style={{ background: '#FEE2E2', color: '#EF4444' }}>
+              <TrashIcon />
+            </div>
+            <div>
+              <p className="settings-card-title" style={{ color: '#991B1B' }}>Danger Zone</p>
+              <p className="settings-card-desc" style={{ color: '#B91C1C' }}>Irreversibly delete your account and all data</p>
+            </div>
+          </div>
+
+          <div className="settings-card-body" style={{ background: '#FFFDFD' }}>
+            <p style={{ fontSize: '13px', lineHeight: '1.6', color: '#7F1D1D', marginBottom: '16px', fontWeight: 500 }}>
+              Deleting your account is permanent. It will permanently remove your profile details, delete all projects you own, clean up room participations, and delete all of your active friendship connections. This action cannot be undone.
+            </p>
+
+            {!deleteConfirmOpen ? (
+              <button
+                type="button"
+                className="settings-delete-trigger-btn"
+                onClick={() => {
+                  setDeleteConfirmOpen(true);
+                  setDeletePwd('');
+                  setDeleteError('');
+                }}
+                style={{
+                  background: '#EF4444', color: '#FFFFFF', border: 'none',
+                  padding: '10px 16px', borderRadius: '6px', fontSize: '13px',
+                  fontWeight: 600, cursor: 'pointer', transition: 'background 0.2s',
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = '#DC2626'}
+                onMouseOut={(e) => e.currentTarget.style.background = '#EF4444'}
+              >
+                Delete Account…
+              </button>
+            ) : (
+              <form onSubmit={handleDeleteAccount} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '8px' }}>
+                {user?.hasPassword ? (
+                  <div className="settings-field" style={{ marginBottom: 0 }}>
+                    <label className="settings-label" htmlFor="settings-delete-pwd" style={{ color: '#991B1B' }}>
+                      Enter your password to verify ownership
+                    </label>
+                    <div className="settings-pw-input-wrap">
+                      <input
+                        id="settings-delete-pwd"
+                        className="settings-input"
+                        type={showDeletePwd ? 'text' : 'password'}
+                        value={deletePwd}
+                        onChange={(e) => setDeletePwd(e.target.value)}
+                        placeholder="Enter password to confirm"
+                        disabled={deleteLoading}
+                        style={{ paddingRight: '40px', borderColor: '#FCA5A5' }}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="settings-pw-toggle"
+                        onClick={() => setShowDeletePwd(v => !v)}
+                        aria-label={showDeletePwd ? 'Hide password' : 'Show password'}
+                        style={{ color: '#F87171' }}
+                      >
+                        <EyeIcon show={showDeletePwd} />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p style={{ fontSize: '13px', color: '#B91C1C', fontWeight: 600 }}>
+                    Please confirm that you want to delete your account permanently.
+                  </p>
+                )}
+
+                {/* Error Banner */}
+                {deleteError && (
+                  <div className="settings-banner settings-banner--error" style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#B91C1C', padding: '10px 12px', borderRadius: '6px', fontSize: '12.5px' }} role="alert">
+                    {deleteError}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
+                  <button
+                    type="submit"
+                    className="settings-delete-final-btn"
+                    disabled={deleteLoading || (user?.hasPassword && !deletePwd)}
+                    style={{
+                      background: (user?.hasPassword && !deletePwd) ? '#FCA5A5' : '#DC2626',
+                      color: '#FFFFFF', border: 'none', padding: '10px 16px',
+                      borderRadius: '6px', fontSize: '13px', fontWeight: 600,
+                      cursor: (user?.hasPassword && !deletePwd) ? 'not-allowed' : 'pointer',
+                      transition: 'background 0.2s',
+                    }}
+                    onMouseOver={(e) => {
+                      if (!user?.hasPassword || deletePwd) e.currentTarget.style.background = '#991B1B';
+                    }}
+                    onMouseOut={(e) => {
+                      if (!user?.hasPassword || deletePwd) e.currentTarget.style.background = '#DC2626';
+                    }}
+                  >
+                    {deleteLoading ? 'Deleting Account…' : 'Permanently Delete My Account'}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="settings-delete-cancel-btn"
+                    onClick={() => {
+                      setDeleteConfirmOpen(false);
+                      setDeletePwd('');
+                      setDeleteError('');
+                    }}
+                    disabled={deleteLoading}
+                    style={{
+                      background: '#F3F4F6', color: '#374151', border: '1px solid #D1D5DB',
+                      padding: '10px 16px', borderRadius: '6px', fontSize: '13px',
+                      fontWeight: 600, cursor: 'pointer', transition: 'background 0.2s',
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = '#E5E7EB'}
+                    onMouseOut={(e) => e.currentTarget.style.background = '#F3F4F6'}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
         </div>
 
       </div>

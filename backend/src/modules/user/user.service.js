@@ -171,3 +171,78 @@ export const changePassword = async (userId, { currentPassword, newPassword }) =
 
   return { message: "Password updated successfully." };
 };
+
+/**
+ * DELETE user account
+ * Requires password if the user has a password configured.
+ * Cleans up all related connections and cascades.
+ */
+export const deleteUserAccount = async (userId, password) => {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new AppError("User not found", 404);
+
+  // If this user has a password set, verify it first before deletion
+  if (user.hasPassword) {
+    if (!password) {
+      throw new AppError("Password is required to delete your account.", 400);
+    }
+    const valid = await comparePassword(password, user.password);
+    if (!valid) {
+      throw new AppError("Incorrect password.", 400);
+    }
+  }
+
+  // Cascading cleanup of dependencies in order of reference
+  await prisma.$transaction([
+    // Delete Friends
+    prisma.friend.deleteMany({
+      where: {
+        OR: [
+          { requesterId: userId },
+          { receiverId: userId }
+        ]
+      }
+    }),
+
+    // Delete Sessions
+    prisma.session.deleteMany({
+      where: {
+        OR: [
+          { hostId: userId },
+          { guestId: userId }
+        ]
+      }
+    }),
+
+    // Delete Project Memberships of projects owned by this user
+    prisma.projectMember.deleteMany({
+      where: {
+        project: { ownerId: userId }
+      }
+    }),
+
+    // Delete Projects owned by this user
+    prisma.project.deleteMany({
+      where: { ownerId: userId }
+    }),
+
+    // Delete Room Participants of rooms created by this user
+    prisma.roomParticipant.deleteMany({
+      where: {
+        room: { createdById: userId }
+      }
+    }),
+
+    // Delete Rooms created by this user
+    prisma.room.deleteMany({
+      where: { createdById: userId }
+    }),
+
+    // Finally, delete the User
+    prisma.user.delete({
+      where: { id: userId }
+    })
+  ]);
+
+  return { message: "Account deleted successfully." };
+};
