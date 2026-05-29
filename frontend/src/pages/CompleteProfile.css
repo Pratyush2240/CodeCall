@@ -1,0 +1,257 @@
+/* =====================================================
+   CompleteProfile — Onboarding Page Styles
+   Extends Login.css design tokens
+   ===================================================== */
+
+/* ─── Avatar Display ─────────────────────────────── */
+.onboarding-avatar-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: var(--space-lg, 16px);
+}
+
+.onboarding-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--color-border);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  animation: avatarIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.onboarding-avatar-placeholder {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #EFF6FF;
+  border: 2px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+  color: #2563EB;
+  animation: avatarIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes avatarIn {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.onboarding-avatar-hint {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+/* ─── Step indicator ─────────────────────────────── */
+.onboarding-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  margin-bottom: var(--space-xs, 4px);
+}
+
+.onboarding-step-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+/* ─── Username availability indicator ────────────── */
+.username-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: 4px;
+  min-height: 18px;
+}
+
+.username-status--checking  { color: var(--color-text-muted); }
+.username-status--available { color: #10B981; }
+.username-status--taken     { color: #EF4444; }
+.username-status--invalid   { color: #F59E0B; }
+
+.username-checking-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.9); }
+  50%       { opacity: 1;   transform: scale(1.1); }
+}
+
+/* ─── Password toggle section ────────────────────── */
+.pw-section-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--color-border);
+  padding: var(--space-md, 12px) 0 0;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font-family);
+  text-align: left;
+  margin-top: var(--space-sm, 8px);
+  transition: color 0.2s;
+}
+
+.pw-section-toggle:hover { color: var(--color-text-primary); }
+
+.pw-section-toggle-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #EFF6FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pw-section-toggle-chevron {
+  margin-left: auto;
+  transition: transform 0.25s ease;
+}
+
+.pw-section-toggle-chevron--open { transform: rotate(180deg); }
+
+.pw-section-body {
+  overflow: hidden;
+  animation: slideDown 0.25s ease both;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md, 12px);
+  padding-top: var(--space-md, 12px);
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.pw-optional-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  background: var(--color-border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-left: 6px;
+}
+
+/* ─── Skip hint ──────────────────────────────────── */
+.onboarding-skip {
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+  text-align: center;
+  margin-top: var(--space-xs, 4px);
+}
+
+/* ─── Field error ────────────────────────────────── */
+.form-input--error {
+  border-color: #EF4444 !important;
+  background: #FEF2F2 !important;
+}
+
+.field-error {
+  font-size: 12px;
+  font-weight: 500;
+  color: #EF4444;
+  margin-top: 2px;
+  animation: errorIn 0.2s ease both;
+}
+
+@keyframes errorIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Shared password styles ─────────────────────── */
+.pwd-toggle-btn {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  transition: color 0.2s ease;
+}
+
+.pwd-toggle-btn:hover { color: var(--color-text-secondary); }
+
+.pw-strength { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+
+.pw-bar-track {
+  flex: 1;
+  height: 4px;
+  background: var(--color-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.pw-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+
+.pw-strength-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.pw-rules {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+.pw-rule {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  transition: color 0.2s;
+}
+
+.pw-rule--pass { color: #10B981; }
+.pw-rule svg { flex-shrink: 0; }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import './Login.css';
 import API from '../api/axios';
+import { useUser } from '../context/UserContext';
 
 // ─── Backend URL (used only for OAuth redirects — not Axios) ─────────────────
 const BACKEND_URL = 'http://localhost:5000';
@@ -63,6 +64,7 @@ export default function LoginPage() {
 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { refetch } = useUser();
 
   // Display OAuth errors passed back from the backend redirect
   useEffect(() => {
@@ -82,6 +84,7 @@ export default function LoginPage() {
       const { accessToken, refreshToken } = response.data;
       if (accessToken)  localStorage.setItem('accessToken', accessToken);
       if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+      await refetch();
       navigate('/dashboard');
     } catch (err) {
       const message =
