@@ -33,10 +33,10 @@ export const register = catchAsync(async (req, res) => {
  * LOGIN
  */
 export const login = catchAsync(async (req, res) => {
-  const { email, password } = req.body;
+  const { identifier, password } = req.body;
 
   const { accessToken, refreshToken } = await loginUser({
-    email,
+    identifier,
     password,
   });
 

@@ -55,19 +55,26 @@ const EyeIcon = ({ show }) => show ? (
 
 /* ─── Component ──────────────────────────────────── */
 export default function LoginPage() {
-  const [email, setEmail]         = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword]   = useState('');
   const [showPwd, setShowPwd]     = useState(false);
   const [loading, setLoading]     = useState(false);
   const [oauthLoading, setOAuthLoading] = useState(''); // 'github' | 'google' | ''
   const [error, setError]         = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { refetch } = useUser();
 
-  // Display OAuth errors passed back from the backend redirect
+  // Display OAuth errors or account deletion notices on mount
   useEffect(() => {
+    const deleted = localStorage.getItem('account_deleted');
+    if (deleted === 'true') {
+      setSuccessMessage('Your account has been permanently deleted.');
+      localStorage.removeItem('account_deleted');
+    }
+
     const err = searchParams.get('error');
     if (err === 'oauth_failed') {
       setError('OAuth authentication failed. Please try again or use email/password.');
@@ -80,7 +87,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await API.post('/auth/login', { email, password });
+      const response = await API.post('/auth/login', { identifier, password });
       const { accessToken, refreshToken } = response.data;
       if (accessToken)  localStorage.setItem('accessToken', accessToken);
       if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
@@ -134,18 +141,18 @@ export default function LoginPage() {
           noValidate
           aria-label="Sign in form"
         >
-          {/* Email */}
+          {/* Email or Username */}
           <div className="field-group">
-            <label className="field-label" htmlFor="email-input">Email Address</label>
+            <label className="field-label" htmlFor="email-input">Email or Username</label>
             <div className="input-wrapper">
               <input
                 id="email-input"
                 className="form-input"
-                type="email"
-                autoComplete="email"
-                placeholder="architect@codecall.io"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
+                type="text"
+                autoComplete="username"
+                placeholder="jane@codecall.io or jane_doe"
+                value={identifier}
+                onChange={e => setIdentifier(e.target.value)}
                 required
                 aria-required="true"
                 disabled={loading}
@@ -194,6 +201,23 @@ export default function LoginPage() {
               </button>
             </div>
           </div>
+
+          {/* Success banner */}
+          {successMessage && (
+            <div className="form-success-banner" style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              background: '#ECFDF5', border: '1px solid #A7F3D0',
+              borderRadius: '6px', padding: '12px', color: '#065F46',
+              fontSize: '13px', fontWeight: 500, marginBottom: '16px'
+            }} role="status" aria-live="polite">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              {successMessage}
+            </div>
+          )}
 
           {/* Error banner */}
           {error && (

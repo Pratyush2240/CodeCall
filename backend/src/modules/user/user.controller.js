@@ -3,6 +3,7 @@ import {
   getRecentCollaborators,
   updateUserProfile,
   changePassword,
+  deleteUserAccount,
 } from "./user.service.js";
 import catchAsync from "../../utils/catchAsync.js";
 
@@ -41,5 +42,15 @@ export const patchProfile = catchAsync(async (req, res) => {
 export const patchPassword = catchAsync(async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   const result = await changePassword(req.user.id, { currentPassword, newPassword });
+  res.status(200).json({ status: "success", ...result });
+});
+
+/**
+ * DELETE /api/user/delete-account
+ * Deletes the user account permanently (requires password verification if hasPassword = true).
+ */
+export const deleteAccount = catchAsync(async (req, res) => {
+  const { password } = req.body;
+  const result = await deleteUserAccount(req.user.id, password);
   res.status(200).json({ status: "success", ...result });
 });
