@@ -22,6 +22,10 @@ model User {
   avatar      String?           // Profile picture URL from OAuth provider
   isOAuthUser Boolean  @default(false)
 
+  // Onboarding state
+  isProfileComplete Boolean @default(false)
+  hasPassword       Boolean @default(false)
+
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
   ownedProjects       Project[]         @relation("ProjectOwner")

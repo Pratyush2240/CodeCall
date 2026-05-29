@@ -14,6 +14,8 @@ import { Strategy as GitHubStrategy } from "passport-github2";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import prisma from "../../config/prisma.js";
 import { env } from "../../config/env.js";
+import { verifyAccessToken } from "../../utils/jwt.js";
+import AppError from "../../utils/appError.js";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -66,8 +68,19 @@ async function generateUniqueUsername(displayName) {
  * @param {string|null} avatar  - Avatar URL from provider
  * @param {Function} done       - Passport done callback
  */
-async function resolveOAuthUser(provider, providerId, email, displayName, avatar, done) {
+async function resolveOAuthUser(req, provider, providerId, email, displayName, avatar, done) {
   try {
+    let linkingUserId = null;
+    const state = req.query?.state;
+    if (state) {
+      try {
+        const payload = verifyAccessToken(state);
+        linkingUserId = payload.userId;
+      } catch (err) {
+        console.error("[OAuth] Invalid state token during linking:", err.message);
+      }
+    }
+
     // 1. Look up by provider + providerId (existing OAuth user)
     const existingOAuth = await prisma.user.findUnique({
       where: {
@@ -77,12 +90,33 @@ async function resolveOAuthUser(provider, providerId, email, displayName, avatar
     });
 
     if (existingOAuth) {
+      if (linkingUserId) {
+        if (existingOAuth.id !== linkingUserId) {
+          return done(new AppError("This social account is already connected to another user.", 400), null);
+        }
+        // Already connected to the same user, just update avatar
+        const updated = await prisma.user.update({
+          where: { id: existingOAuth.id },
+          data: { avatar },
+        });
+        return done(null, updated);
+      }
+
       // Update avatar in case it changed
       const updated = await prisma.user.update({
         where: { id: existingOAuth.id },
         data: { avatar },
       });
       return done(null, updated);
+    }
+
+    // If we are linking a new provider but no existing OAuth record exists for it
+    if (linkingUserId) {
+      const linked = await prisma.user.update({
+        where: { id: linkingUserId },
+        data: { provider, providerId, avatar, isOAuthUser: true },
+      });
+      return done(null, linked);
     }
 
     // 2. If we have an email, try to link to an existing local account
@@ -129,8 +163,9 @@ export const githubStrategy = new GitHubStrategy(
     clientSecret: env.GITHUB_CLIENT_SECRET || "placeholder",
     callbackURL: "http://localhost:5000/api/auth/github/callback",
     scope: ["user:email"],        // request email access
+    passReqToCallback: true,      // allows req.query in strategy verification
   },
-  async (accessToken, refreshToken, profile, done) => {
+  async (req, accessToken, refreshToken, profile, done) => {
     // GitHub may return multiple emails; prefer the primary + verified one
     const emailObj =
       profile.emails?.find((e) => e.primary && e.verified) ||
@@ -140,7 +175,7 @@ export const githubStrategy = new GitHubStrategy(
     const avatar = profile.photos?.[0]?.value || null;
     const displayName = profile.displayName || profile.username || "github_user";
 
-    await resolveOAuthUser("github", profile.id, email, displayName, avatar, done);
+    await resolveOAuthUser(req, "github", profile.id, email, displayName, avatar, done);
   }
 );
 
@@ -152,12 +187,13 @@ export const googleStrategy = new GoogleStrategy(
     clientSecret: env.GOOGLE_CLIENT_SECRET || "placeholder",
     callbackURL: "http://localhost:5000/api/auth/google/callback",
     scope: ["profile", "email"],
+    passReqToCallback: true,      // allows req.query in strategy verification
   },
-  async (accessToken, refreshToken, profile, done) => {
+  async (req, accessToken, refreshToken, profile, done) => {
     const email = profile.emails?.[0]?.value || null;
     const avatar = profile.photos?.[0]?.value || null;
     const displayName = profile.displayName || "google_user";
 
-    await resolveOAuthUser("google", profile.id, email, displayName, avatar, done);
+    await resolveOAuthUser(req, "google", profile.id, email, displayName, avatar, done);
   }
 );

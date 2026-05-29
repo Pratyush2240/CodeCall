@@ -6,10 +6,14 @@ import {
   forgotPassword,
   resetPassword,
   oauthLogin,
+  checkUsernameAvailability,
+  completeUserProfile,
 } from "./auth.service.js";
 
 import { env } from "../../config/env.js";
 import catchAsync from "../../utils/catchAsync.js";
+import { getUserProfile } from "../user/user.service.js";
+import { verifyAccessToken } from "../../utils/jwt.js";
 
 /**
  * REGISTER — auto-login on success
@@ -106,8 +110,20 @@ export const resetPwd = catchAsync(async (req, res) => {
  */
 export const githubCallback = async (req, res) => {
   try {
-    const { accessToken, refreshToken } = await oauthLogin(req.user);
     const clientUrl = env.CLIENT_URL || "http://localhost:5173";
+    const state = req.query?.state;
+    if (state) {
+      try {
+        const payload = verifyAccessToken(state);
+        if (payload.userId) {
+          return res.redirect(`${clientUrl}/settings?connected=github`);
+        }
+      } catch (err) {
+        console.error("[OAuth] Invalid linking state on callback:", err.message);
+      }
+    }
+
+    const { accessToken, refreshToken } = await oauthLogin(req.user);
     return res.redirect(
       `${clientUrl}/oauth/callback?token=${encodeURIComponent(accessToken)}&refresh=${encodeURIComponent(refreshToken)}`
     );
@@ -125,8 +141,20 @@ export const githubCallback = async (req, res) => {
  */
 export const googleCallback = async (req, res) => {
   try {
-    const { accessToken, refreshToken } = await oauthLogin(req.user);
     const clientUrl = env.CLIENT_URL || "http://localhost:5173";
+    const state = req.query?.state;
+    if (state) {
+      try {
+        const payload = verifyAccessToken(state);
+        if (payload.userId) {
+          return res.redirect(`${clientUrl}/settings?connected=google`);
+        }
+      } catch (err) {
+        console.error("[OAuth] Invalid linking state on callback:", err.message);
+      }
+    }
+
+    const { accessToken, refreshToken } = await oauthLogin(req.user);
     return res.redirect(
       `${clientUrl}/oauth/callback?token=${encodeURIComponent(accessToken)}&refresh=${encodeURIComponent(refreshToken)}`
     );
@@ -136,3 +164,28 @@ export const googleCallback = async (req, res) => {
     return res.redirect(`${clientUrl}/login?error=oauth_failed`);
   }
 };
+
+/**
+ * GET ME
+ */
+export const getMe = catchAsync(async (req, res) => {
+  const user = await getUserProfile(req.user.id);
+  res.status(200).json({ status: "success", data: user });
+});
+
+/**
+ * CHECK USERNAME AVAILABILITY
+ */
+export const checkUsername = catchAsync(async (req, res) => {
+  const { username } = req.params;
+  const available = await checkUsernameAvailability(username, req.user?.id);
+  res.status(200).json({ status: "success", available });
+});
+
+/**
+ * COMPLETE PROFILE (OAuth Onboarding)
+ */
+export const completeProfile = catchAsync(async (req, res) => {
+  const result = await completeUserProfile(req.user.id, req.body);
+  res.status(200).json({ status: "success", data: result });
+});
