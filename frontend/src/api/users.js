@@ -15,3 +15,7 @@ export const updateProfile = (data) =>
 /** PATCH change/add password */
 export const changePassword = (data) =>
   API.patch('/user/change-password', data).then((r) => r.data);
+
+/** DELETE account permanent */
+export const deleteAccount = (password) =>
+  API.delete('/user/delete-account', { data: { password } }).then((r) => r.data);

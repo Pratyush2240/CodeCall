@@ -8,6 +8,7 @@ import {
   getCollaborators,
   patchProfile,
   patchPassword,
+  deleteAccount,
 } from "./user.controller.js";
 
 const router = express.Router();
@@ -32,6 +33,12 @@ router.patch("/profile", patchProfile);
  * Change or add a password.
  */
 router.patch("/change-password", patchPassword);
+
+/**
+ * DELETE /api/user/delete-account
+ * Permanently delete the user account and clean up dependencies.
+ */
+router.delete("/delete-account", deleteAccount);
 
 /**
  * GET /api/user/recent-collaborators

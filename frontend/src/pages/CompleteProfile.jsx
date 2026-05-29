@@ -43,13 +43,6 @@ const EyeIcon = ({ show }) => show ? (
   </svg>
 );
 
-const ChevronDown = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="6 9 12 15 18 9" />
-  </svg>
-);
-
 const LockIcon = () => (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
     <path d="M12 1a5 5 0 00-5 5v3H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V11a2 2 0 00-2-2h-1V6a5 5 0 00-5-5zm-3 5a3 3 0 016 0v3H9V6z"/>
@@ -74,21 +67,18 @@ function getStrength(pw) {
 /* ─── Component ────────────────────────────────────── */
 export default function CompleteProfilePage() {
   const navigate = useNavigate();
-  const { refetch } = useUser();
+  const { user, loading: loadingMe, refetch } = useUser();
 
-  /* User data from /me */
-  const [oauthAvatar, setOauthAvatar]     = useState(null);
-  const [oauthFullName, setOauthFullName] = useState('');
-  const [isOAuthUser, setIsOAuthUser]     = useState(false);
-  const [loadingMe, setLoadingMe]         = useState(true);
+  /* User data derived from global context */
+  const oauthAvatar = user?.avatar || null;
+  const oauthFullName = user?.fullName || '';
 
-  /* Form */
+  /* Form state */
   const [fullName, setFullName]           = useState('');
   const [username, setUsername]           = useState('');
   const [password, setPassword]           = useState('');
   const [confirmPwd, setConfirmPwd]       = useState('');
   const [showPwd, setShowPwd]             = useState(false);
-  const [showPwSection, setShowPwSection] = useState(false);
 
   /* Status */
   const [usernameStatus, setUsernameStatus] = useState('idle');
@@ -99,25 +89,31 @@ export default function CompleteProfilePage() {
   const debounceRef = useRef(null);
   const strength    = getStrength(password);
 
-  /* Load /me on mount */
+  /* Initialize form state when user loaded */
   useEffect(() => {
-    API.get('/auth/me')
-      .then(res => {
-        const user = res.data?.data;
-        if (!user) return;
-        if (user.isProfileComplete) {
-          navigate('/dashboard', { replace: true });
-          return;
-        }
-        setOauthAvatar(user.avatar || null);
-        setOauthFullName(user.fullName || '');
-        setIsOAuthUser(!!user.isOAuthUser);
-        setFullName(user.fullName || '');
-        setUsername(user.username || '');
-      })
-      .catch(() => navigate('/login', { replace: true }))
-      .finally(() => setLoadingMe(false));
-  }, [navigate]);
+    if (user) {
+      if (user.isProfileComplete && user.hasPassword) {
+        navigate('/dashboard', { replace: true });
+        return;
+      }
+      setFullName(user.fullName || '');
+      setUsername(user.username || '');
+    }
+  }, [user, navigate]);
+
+  /* Redirect if not authenticated */
+  useEffect(() => {
+    if (!loadingMe && !user) {
+      navigate('/login', { replace: true });
+    }
+  }, [user, loadingMe, navigate]);
+
+  /* Reactive redirect on successful profile complete */
+  useEffect(() => {
+    if (user?.isProfileComplete && user?.hasPassword) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
 
   /* Debounced username check */
   const checkUsername = useCallback((value) => {
@@ -153,10 +149,20 @@ export default function CompleteProfilePage() {
       errs.username = 'This username is already taken.';
     else if (usernameStatus === 'checking')
       errs.username = 'Please wait for the username check.';
-    if (showPwSection && password) {
-      if (strength.level < 3) errs.password = 'Meet all password requirements.';
-      if (password !== confirmPwd) errs.confirmPwd = 'Passwords do not match.';
+
+    // Password is now mandatory for everyone during onboarding
+    if (!password) {
+      errs.password = 'Password is required.';
+    } else if (strength.level < 3) {
+      errs.password = 'Meet all password requirements.';
     }
+
+    if (!confirmPwd) {
+      errs.confirmPwd = 'Confirm password is required.';
+    } else if (password !== confirmPwd) {
+      errs.confirmPwd = 'Passwords do not match.';
+    }
+
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -171,10 +177,10 @@ export default function CompleteProfilePage() {
       await API.post('/auth/complete-profile', {
         fullName: fullName.trim(),
         username: username.trim(),
-        ...(showPwSection && password ? { password, confirmPassword: confirmPwd } : {}),
+        password,
+        confirmPassword: confirmPwd,
       });
       await refetch();
-      navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err.response?.data?.message ?? 'Something went wrong. Please try again.');
     } finally {
@@ -210,9 +216,7 @@ export default function CompleteProfilePage() {
         </div>
         <h1 className="login-heading">Complete Your Profile</h1>
         <p className="login-subtitle">
-          {isOAuthUser
-            ? 'Personalise your CodeCall identity before diving in.'
-            : 'Finish setting up your account to get started.'}
+          Finish setting up your account credentials to get started.
         </p>
       </header>
 
@@ -281,86 +285,75 @@ export default function CompleteProfilePage() {
             {fieldErrors.username && <span className="field-error">{fieldErrors.username}</span>}
           </div>
 
-          {/* Optional password section (OAuth users) */}
-          {isOAuthUser && (
-            <>
-              <button type="button" className="pw-section-toggle"
-                onClick={() => setShowPwSection(v => !v)}
-                aria-expanded={showPwSection}>
-                <span className="pw-section-toggle-icon"><LockIcon /></span>
-                Set a password
-                <span className="pw-optional-badge">Optional</span>
-                <span className={`pw-section-toggle-chevron ${showPwSection ? 'pw-section-toggle-chevron--open' : ''}`}>
-                  <ChevronDown />
+          {/* Mandatory password section */}
+          <div className="pw-section-body" style={{ borderTop: '1px solid var(--color-border)', marginTop: '24px', paddingTop: '16px' }}>
+            <div className="field-group" style={{ marginBottom: '16px' }}>
+              <label className="field-label" htmlFor="cp-password">
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <LockIcon /> Choose Password
                 </span>
-              </button>
-
-              {showPwSection && (
-                <div className="pw-section-body">
-                  <div className="field-group" style={{ marginBottom: 0 }}>
-                    <label className="field-label" htmlFor="cp-password">Password</label>
-                    <div className="input-wrapper" style={{ position: 'relative' }}>
-                      <input
-                        id="cp-password"
-                        className={`form-input ${fieldErrors.password ? 'form-input--error' : ''}`}
-                        type={showPwd ? 'text' : 'password'}
-                        autoComplete="new-password"
-                        placeholder="••••••••••"
-                        value={password}
-                        onChange={e => { setPassword(e.target.value); setFieldErrors(p => ({ ...p, password: null })); }}
-                        style={{ paddingRight: '48px' }}
-                        disabled={loading}
-                      />
-                      <button type="button" className="pwd-toggle-btn"
-                        onClick={() => setShowPwd(v => !v)}
-                        aria-label={showPwd ? 'Hide password' : 'Show password'}>
-                        <EyeIcon show={showPwd} />
-                      </button>
+              </label>
+              <div className="input-wrapper" style={{ position: 'relative' }}>
+                <input
+                  id="cp-password"
+                  className={`form-input ${fieldErrors.password ? 'form-input--error' : ''}`}
+                  type={showPwd ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  placeholder="••••••••••"
+                  value={password}
+                  onChange={e => { setPassword(e.target.value); setFieldErrors(p => ({ ...p, password: null })); }}
+                  style={{ paddingRight: '48px' }}
+                  disabled={loading}
+                  required
+                />
+                <button type="button" className="pwd-toggle-btn"
+                  onClick={() => setShowPwd(v => !v)}
+                  aria-label={showPwd ? 'Hide password' : 'Show password'}>
+                  <EyeIcon show={showPwd} />
+                </button>
+              </div>
+              {password && (
+                <>
+                  <div className="pw-strength">
+                    <div className="pw-bar-track">
+                      <div className="pw-bar-fill" style={{ width: `${(strength.level / 3) * 100}%`, background: strength.color }} />
                     </div>
-                    {password && (
-                      <>
-                        <div className="pw-strength">
-                          <div className="pw-bar-track">
-                            <div className="pw-bar-fill" style={{ width: `${(strength.level / 3) * 100}%`, background: strength.color }} />
-                          </div>
-                          <span className="pw-strength-label" style={{ color: strength.color }}>{strength.label}</span>
-                        </div>
-                        <ul className="pw-rules">
-                          {PW_RULES.map(r => (
-                            <li key={r.id} className={`pw-rule ${r.test(password) ? 'pw-rule--pass' : ''}`}>
-                              {r.test(password) ? <CheckIcon /> : <XIcon />}{r.label}
-                            </li>
-                          ))}
-                        </ul>
-                      </>
-                    )}
-                    {fieldErrors.password && <span className="field-error">{fieldErrors.password}</span>}
+                    <span className="pw-strength-label" style={{ color: strength.color }}>{strength.label}</span>
                   </div>
-
-                  <div className="field-group" style={{ marginBottom: 0 }}>
-                    <label className="field-label" htmlFor="cp-confirm">Confirm Password</label>
-                    <div className="input-wrapper">
-                      <input
-                        id="cp-confirm"
-                        className={`form-input ${fieldErrors.confirmPwd ? 'form-input--error' : ''}`}
-                        type="password"
-                        autoComplete="new-password"
-                        placeholder="••••••••••"
-                        value={confirmPwd}
-                        onChange={e => { setConfirmPwd(e.target.value); setFieldErrors(p => ({ ...p, confirmPwd: null })); }}
-                        disabled={loading}
-                      />
-                    </div>
-                    {fieldErrors.confirmPwd && <span className="field-error">{fieldErrors.confirmPwd}</span>}
-                  </div>
-                </div>
+                  <ul className="pw-rules">
+                    {PW_RULES.map(r => (
+                      <li key={r.id} className={`pw-rule ${r.test(password) ? 'pw-rule--pass' : ''}`}>
+                        {r.test(password) ? <CheckIcon /> : <XIcon />}{r.label}
+                      </li>
+                    ))}
+                  </ul>
+                </>
               )}
-            </>
-          )}
+              {fieldErrors.password && <span className="field-error">{fieldErrors.password}</span>}
+            </div>
+
+            <div className="field-group" style={{ marginBottom: 0 }}>
+              <label className="field-label" htmlFor="cp-confirm">Confirm Password</label>
+              <div className="input-wrapper">
+                <input
+                  id="cp-confirm"
+                  className={`form-input ${fieldErrors.confirmPwd ? 'form-input--error' : ''}`}
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="••••••••••"
+                  value={confirmPwd}
+                  onChange={e => { setConfirmPwd(e.target.value); setFieldErrors(p => ({ ...p, confirmPwd: null })); }}
+                  disabled={loading}
+                  required
+                />
+              </div>
+              {fieldErrors.confirmPwd && <span className="field-error">{fieldErrors.confirmPwd}</span>}
+            </div>
+          </div>
 
           {/* Error banner */}
           {error && (
-            <div className="form-error" role="alert">
+            <div className="form-error" role="alert" style={{ marginTop: '16px' }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" strokeWidth="2" strokeLinecap="round"
                 strokeLinejoin="round" style={{ flexShrink: 0 }}>
@@ -377,14 +370,10 @@ export default function CompleteProfilePage() {
             type="submit"
             className="btn-primary"
             disabled={loading || usernameStatus === 'checking'}
-            style={{ marginTop: 'var(--space-sm, 8px)' }}
+            style={{ marginTop: '24px' }}
           >
             {loading ? <><span className="spinner" aria-hidden="true" />Saving Profile…</> : 'Complete Profile & Enter'}
           </button>
-
-          {isOAuthUser && (
-            <p className="onboarding-skip">You can update your profile later in settings.</p>
-          )}
         </form>
       </div>
 
