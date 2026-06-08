@@ -404,7 +404,7 @@ export default function RoomSessionPage() {
   const participants = room.participants ?? [];
   const createdAt    = room.createdAt ? new Date(room.createdAt).toLocaleString() : null;
   const isAdmin      = room.createdBy === currentUserId;  // ← determines role
-  const isEnded      = roomStatus === 'ended';
+  const isEnded      = roomStatus === 'ENDED';
 
   /* ── Live presence: prefer socket data, fall back to API ── */
   const displayUsers = isConnected && onlineUsers.length > 0
