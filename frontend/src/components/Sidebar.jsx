@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { getAvatarMeta } from '../context/UserContext';
 import { getRecentCollaborators } from '../api/users';
+import InviteModal from './InviteModal';
 import './Sidebar.css';
+
 
 /* ── Icons ── */
 const UserAddIcon = () => (
@@ -94,6 +96,8 @@ export default function Sidebar() {
   const [collaborators, setCollaborators] = useState([]);
   const [loading, setLoading]             = useState(true);
   const [error, setError]                 = useState(null);
+  const [isInviteOpen, setIsInviteOpen]   = useState(false);
+
 
   const load = async () => {
     setLoading(true);
@@ -169,10 +173,23 @@ export default function Sidebar() {
       </ul>
 
       {/* Invite Button */}
-      <button className="sidebar-invite-btn" id="invite-member-btn" aria-label="Invite a team member">
+      <button
+        className="sidebar-invite-btn"
+        id="invite-member-btn"
+        aria-label="Invite a team member"
+        onClick={() => setIsInviteOpen(true)}
+      >
         <UserAddIcon />
         Invite Member
       </button>
+
+      {isInviteOpen && (
+        <InviteModal
+          isOpen={isInviteOpen}
+          onClose={() => setIsInviteOpen(false)}
+        />
+      )}
+
 
       {/* Footer Links */}
       <div className="sidebar-footer">

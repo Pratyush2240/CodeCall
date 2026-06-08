@@ -9,6 +9,7 @@ import {
   patchProfile,
   patchPassword,
   deleteAccount,
+  searchUsersHandler,
 } from "./user.controller.js";
 
 const router = express.Router();
@@ -17,10 +18,17 @@ const router = express.Router();
 router.use(requireAuth);
 
 /**
+ * GET /api/user/search
+ * Search registered users by username or email.
+ */
+router.get("/search", searchUsersHandler);
+
+/**
  * GET /api/user/profile
  * Returns the current user's full profile.
  */
 router.get("/profile", getProfile);
+
 
 /**
  * PATCH /api/user/profile

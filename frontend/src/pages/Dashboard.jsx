@@ -4,9 +4,12 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import RoomCard from '../components/RoomCard';
 import ConfirmModal from '../components/ConfirmModal';
+import InvitationCard from '../components/InvitationCard';
 import { useUser } from '../context/UserContext';
 import { createRoom, joinRoom, getRooms, renameRoom, deleteRoom as deleteRoomApi } from '../api/rooms';
+import { getMyInvitations, acceptInvitation, declineInvitation } from '../api/invitations';
 import './Dashboard.css';
+
 
 /* ── Icons ── */
 const PlusIcon = () => (
@@ -72,6 +75,50 @@ export default function DashboardPage() {
   const [deleteTarget, setDeleteTarget]   = useState(null);
   const [deleting, setDeleting]           = useState(false);
 
+  const [invitations, setInvitations]           = useState([]);
+  const [invitationsLoading, setInvitationsLoading] = useState(true);
+
+  /* ── Fetch pending invitations on mount ── */
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        setInvitationsLoading(true);
+        const data = await getMyInvitations();
+        if (!cancelled) setInvitations(data || []);
+      } catch (err) {
+        console.error('Failed to load invitations:', err);
+      } finally {
+        if (!cancelled) setInvitationsLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, []);
+
+  /* ── Accept Invitation ── */
+  const handleAcceptInvitation = async (invitationId) => {
+    try {
+      const room = await acceptInvitation(invitationId);
+      const roomId = room?.id ?? room?.roomId ?? room?._id;
+      setInvitations((prev) => prev.filter((i) => i.id !== invitationId));
+      navigate(`/room/${roomId}`);
+    } catch (err) {
+      alert(err?.response?.data?.message ?? 'Failed to accept invitation.');
+    }
+  };
+
+  /* ── Decline Invitation ── */
+  const handleDeclineInvitation = async (invitationId) => {
+    try {
+      await declineInvitation(invitationId);
+      setInvitations((prev) => prev.filter((i) => i.id !== invitationId));
+    } catch (err) {
+      alert(err?.response?.data?.message ?? 'Failed to decline invitation.');
+    }
+  };
+
   /* ── Fetch recent rooms on mount (limit 3) ── */
   useEffect(() => {
     let cancelled = false;
@@ -95,6 +142,7 @@ export default function DashboardPage() {
 
     return () => { cancelled = true; };
   }, []);
+
 
   /* ── Create Room ── */
   const handleCreateRoom = async () => {
@@ -274,8 +322,29 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* ── Pending Invitations ── */}
+
+          {invitations.length > 0 && (
+            <section className="dashboard-invitations-section" aria-label="Pending invitations" style={{ marginBottom: '36px' }}>
+              <div className="section-header">
+                <h2 className="section-title">Pending Invitations</h2>
+              </div>
+              <div className="invitations-list" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {invitations.map((invite) => (
+                  <InvitationCard
+                    key={invite.id}
+                    invitation={invite}
+                    onAccept={handleAcceptInvitation}
+                    onDecline={handleDeclineInvitation}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* ── Recent Rooms ── */}
           <section className="recent-rooms-section" aria-label="Recent rooms">
+
             <div className="section-header">
               <h2 className="section-title">Recent Rooms</h2>
               <a href="/rooms" className="section-link">View All</a>
