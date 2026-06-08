@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import RoomCard from '../components/RoomCard';
+import ConfirmModal from '../components/ConfirmModal';
 import { useUser } from '../context/UserContext';
-import { createRoom, joinRoom, getRooms } from '../api/rooms';
+import { createRoom, joinRoom, getRooms, renameRoom, deleteRoom as deleteRoomApi } from '../api/rooms';
 import './Dashboard.css';
 
 /* ── Icons ── */
@@ -48,8 +49,19 @@ export default function DashboardPage() {
     ? user.fullName.trim().split(' ')[0]
     : user?.username || 'there';
 
+  // Resolve current user ID for ownership checks
+  const currentUserId = (() => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return null;
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.userId ?? payload.id ?? payload.sub ?? null;
+    } catch { return null; }
+  })();
+
   /* ── State ── */
   const [roomCode, setRoomCode]           = useState('');
+  const [roomName, setRoomName]           = useState('');
   const [recentRooms, setRecentRooms]     = useState([]);
   const [roomsLoading, setRoomsLoading]   = useState(true);
   const [roomsError, setRoomsError]       = useState(null);
@@ -57,8 +69,10 @@ export default function DashboardPage() {
   const [createError, setCreateError]     = useState(null);
   const [joining, setJoining]             = useState(false);
   const [joinError, setJoinError]         = useState(null);
+  const [deleteTarget, setDeleteTarget]   = useState(null);
+  const [deleting, setDeleting]           = useState(false);
 
-  /* ── Fetch recent rooms on mount ── */
+  /* ── Fetch recent rooms on mount (limit 3) ── */
   useEffect(() => {
     let cancelled = false;
 
@@ -66,7 +80,7 @@ export default function DashboardPage() {
       try {
         setRoomsLoading(true);
         setRoomsError(null);
-        const rooms = await getRooms();
+        const rooms = await getRooms(null, 3);
         if (!cancelled) setRecentRooms(rooms);
       } catch (err) {
         if (!cancelled) {
@@ -87,7 +101,7 @@ export default function DashboardPage() {
     setCreating(true);
     setCreateError(null);
     try {
-      const room = await createRoom();
+      const room = await createRoom(roomName.trim() || null);
       const roomId = room?.id ?? room?.roomId ?? room?._id;
       navigate(`/room/${roomId}`);
     } catch (err) {
@@ -117,6 +131,33 @@ export default function DashboardPage() {
       );
     } finally {
       setJoining(false);
+    }
+  };
+
+  /* ── Rename Room ── */
+  const handleRename = async (roomId, newName) => {
+    try {
+      await renameRoom(roomId, newName);
+      setRecentRooms((prev) =>
+        prev.map((r) => (r.id === roomId ? { ...r, name: newName } : r))
+      );
+    } catch (err) {
+      alert(err?.response?.data?.message ?? 'Failed to rename room.');
+    }
+  };
+
+  /* ── Delete Room ── */
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteRoomApi(deleteTarget);
+      setRecentRooms((prev) => prev.filter((r) => r.id !== deleteTarget));
+    } catch (err) {
+      alert(err?.response?.data?.message ?? 'Failed to delete room.');
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -161,6 +202,19 @@ export default function DashboardPage() {
               {createError && (
                 <p className="action-error" role="alert">{createError}</p>
               )}
+
+              <input
+                id="room-name-input"
+                type="text"
+                className="join-input"
+                placeholder="Room name (optional)"
+                value={roomName}
+                onChange={(e) => setRoomName(e.target.value)}
+                disabled={creating}
+                style={{ marginBottom: '10px' }}
+                aria-label="Room name"
+                maxLength={50}
+              />
 
               <button
                 id="create-room-btn"
@@ -245,8 +299,15 @@ export default function DashboardPage() {
 
             {!roomsLoading && !roomsError && recentRooms.length > 0 && (
               <div className="room-list">
-                {recentRooms.slice(0, 5).map((room, i) => (
-                  <RoomCard key={room.id ?? room._id ?? room.name} room={room} index={i} />
+                {recentRooms.map((room, i) => (
+                  <RoomCard
+                    key={room.id ?? room._id ?? room.name}
+                    room={room}
+                    index={i}
+                    isOwner={room.createdBy === currentUserId}
+                    onRename={handleRename}
+                    onDelete={(id) => setDeleteTarget(id)}
+                  />
                 ))}
               </div>
             )}
@@ -257,6 +318,19 @@ export default function DashboardPage() {
         {/* ── Right Sidebar ── */}
         <Sidebar />
       </div>
+
+      {/* ── Delete Confirmation Modal ── */}
+      {deleteTarget && (
+        <ConfirmModal
+          title="Delete Room"
+          message="This will permanently delete this room and remove all participants. This action cannot be undone."
+          confirmLabel="Delete Room"
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteTarget(null)}
+          danger
+          loading={deleting}
+        />
+      )}
     </div>
   );
 }

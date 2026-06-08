@@ -13,22 +13,30 @@ const generateCode = () =>
 /* ─── Service Functions ─────────────────────────────────────────────────── */
 
 /**
- * Returns all rooms the given user participates in.
+ * Returns rooms the given user participates in.
+ * @param {string}  userId
+ * @param {string|null}  projectId  — optional project filter
+ * @param {number|null}  limit      — optional max rooms to return
  */
-export async function getRoomsForUser(userId, projectId = null) {
+export async function getRoomsForUser(userId, projectId = null, limit = null) {
   const where = {
     participants: { some: { userId } },
   };
   if (projectId) where.projectId = projectId;
 
-  const rooms = await prisma.room.findMany({
+  const query = {
     where,
     include: {
       createdBy: { select: { id: true, username: true } },
       _count: { select: { participants: true } },
     },
     orderBy: { lastActivity: "desc" },
-  });
+  };
+  if (limit && Number.isInteger(limit) && limit > 0) {
+    query.take = limit;
+  }
+
+  const rooms = await prisma.room.findMany(query);
 
   return rooms.map((r) => ({
     id: r.id,
@@ -48,14 +56,22 @@ export async function getRoomsForUser(userId, projectId = null) {
 
 /**
  * Creates a new room owned by the given user.
+ * @param {string}      userId
+ * @param {string|null} projectId
+ * @param {string|null} name — optional custom room name
  */
-export async function createRoomForUser(userId, projectId = null) {
+export async function createRoomForUser(userId, projectId = null, name = null) {
   const id = crypto.randomUUID();
   const code = generateCode();
 
+  // Use provided name or generate a default
+  const roomName = name && name.trim()
+    ? name.trim().slice(0, 50)
+    : `Room ${code}`;
+
   const data = {
     id,
-    name: `room-${id.slice(0, 6)}`,
+    name: roomName,
     code,
     status: "ACTIVE",
     createdById: userId,
@@ -154,6 +170,11 @@ export async function getRoomById(id, userId) {
 
   if (!room) throw new AppError("Room not found.", 404);
 
+  // Block re-entry to ended rooms
+  if (room.status === "ENDED") {
+    throw new AppError("This room has ended and can no longer be joined.", 410);
+  }
+
   const isParticipant = room.participants.some((p) => p.userId === userId);
   if (!isParticipant) {
     throw new AppError("You are not a participant of this room.", 403);
@@ -204,6 +225,53 @@ export async function endRoom(id, userId) {
     endedAt: updated.endedAt.toISOString(),
     lastUpdated: updated.updatedAt.toISOString(),
   };
+}
+
+/**
+ * Renames a room. Only the creator can do this.
+ */
+export async function renameRoom(roomId, userId, newName) {
+  if (!newName || typeof newName !== "string" || newName.trim().length < 2) {
+    throw new AppError("Room name must be at least 2 characters.", 400);
+  }
+  if (newName.trim().length > 50) {
+    throw new AppError("Room name cannot exceed 50 characters.", 400);
+  }
+
+  const room = await prisma.room.findUnique({ where: { id: roomId } });
+  if (!room) throw new AppError("Room not found.", 404);
+  if (room.createdById !== userId) {
+    throw new AppError("Only the room creator can rename this room.", 403);
+  }
+
+  const updated = await prisma.room.update({
+    where: { id: roomId },
+    data: { name: newName.trim() },
+  });
+
+  return {
+    id: updated.id,
+    name: updated.name,
+    lastUpdated: updated.updatedAt.toISOString(),
+  };
+}
+
+/**
+ * Permanently deletes a room and all its participants.
+ * Only the creator can do this.
+ */
+export async function deleteRoom(roomId, userId) {
+  const room = await prisma.room.findUnique({ where: { id: roomId } });
+  if (!room) throw new AppError("Room not found.", 404);
+  if (room.createdById !== userId) {
+    throw new AppError("Only the room creator can delete this room.", 403);
+  }
+
+  // Transaction: delete participants first, then room
+  await prisma.$transaction([
+    prisma.roomParticipant.deleteMany({ where: { roomId } }),
+    prisma.room.delete({ where: { id: roomId } }),
+  ]);
 }
 
 /**
