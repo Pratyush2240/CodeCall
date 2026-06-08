@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useUser, getAvatarMeta } from '../context/UserContext';
 import ConfirmModal from './ConfirmModal';
 import API from '../api/axios';
+import { getMyInvitations } from '../api/invitations';
 import './Navbar.css';
 
 /* ── Icons ─────────────────────────────────────────── */
@@ -61,6 +62,7 @@ export default function Navbar({ activePage }) {
   const [open, setOpen]       = useState(false);
   const [showLogout, setShowLogout] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [inviteCount, setInviteCount] = useState(0);
   const dropdownRef           = useRef(null);
 
   const searchPlaceholder = activePage === 'projects' ? 'Search projects…' : 'Search rooms…';
@@ -88,6 +90,22 @@ export default function Navbar({ activePage }) {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [open]);
+
+  /* ── Fetch pending invitation count ── */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const invites = await getMyInvitations();
+        if (!cancelled) {
+          setInviteCount(invites?.length || 0);
+        }
+      } catch (err) {
+        console.error("Navbar failed to fetch notifications count:", err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   /* ── Logout handler ── */
   const handleLogout = async () => {
@@ -140,9 +158,15 @@ export default function Navbar({ activePage }) {
             />
           </div>
 
-          <button className="navbar-icon-btn" aria-label="Notifications">
+          <button
+            className="navbar-icon-btn"
+            aria-label="Notifications"
+            onClick={() => navigate('/dashboard')}
+          >
             <BellIcon />
+            {inviteCount > 0 && <span className="navbar-badge">{inviteCount}</span>}
           </button>
+
 
           {/* ── Avatar + Dropdown ── */}
           <div className="navbar-user-menu" ref={dropdownRef}>

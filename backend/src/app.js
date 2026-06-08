@@ -12,6 +12,8 @@ import projectRoutes from "./modules/project/project.routes.js";
 import healthRoutes from "./modules/health/health.routes.js";
 import metricsRoutes from "./modules/metrics/metrics.routes.js";
 import executionRoutes from "./modules/execution/execution.routes.js";
+import invitationRoutes from "./modules/invitation/invitation.routes.js";
+
 
 import errorHandler from "./middlewares/error.middleware.js";
 import correlationMiddleware from "./middlewares/correlation.middleware.js";
@@ -80,6 +82,8 @@ app.use("/api/sessions", sessionRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/execute", executionRoutes);
+app.use("/api/invitations", invitationRoutes);
+
 
 app.use("/api/health", healthRoutes);
 app.use("/api/metrics", metricsRoutes);

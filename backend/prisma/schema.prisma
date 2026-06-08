@@ -32,6 +32,8 @@ model User {
   projectMemberships  ProjectMember[]
   createdRooms        Room[]            @relation("RoomCreator")
   roomParticipations  RoomParticipant[]
+  sentInvitations      RoomInvitation[] @relation("InvitationSender")
+  receivedInvitations  RoomInvitation[] @relation("InvitationReceiver")
 
   createdAt DateTime @default(now())
 
@@ -148,6 +150,7 @@ model Room {
   projectId    String?
   project      Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
   participants RoomParticipant[]
+  invitations  RoomInvitation[]
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
   lastActivity DateTime          @default(now())
@@ -174,3 +177,30 @@ model RoomParticipant {
   @@unique([userId, roomId])
   @@index([roomId])
 }
+
+// ─── Room Invitations ───────────────────────────────
+model RoomInvitation {
+  id         String           @id @default(uuid())
+  roomId     String
+  room       Room             @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  senderId   String
+  sender     User             @relation("InvitationSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User             @relation("InvitationReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  status     InvitationStatus @default(PENDING)
+  createdAt  DateTime         @default(now())
+  expiresAt  DateTime         // 24 hours from creation
+
+  @@unique([roomId, receiverId])   // one active invite per room per user
+  @@index([receiverId])
+  @@index([senderId])
+  @@index([roomId])
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+

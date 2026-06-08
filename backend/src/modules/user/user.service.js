@@ -246,3 +246,39 @@ export const deleteUserAccount = async (userId, password) => {
 
   return { message: "Account deleted successfully." };
 };
+
+/**
+ * GET search users by username (contains, case-insensitive) or email (exact)
+ * Excludes the current user. Returns max 10 results.
+ */
+export const searchUsers = async (query, currentUserId) => {
+  const trimmed = query?.trim();
+  if (!trimmed || trimmed.length < 2) {
+    throw new AppError("Search query must be at least 2 characters.", 400);
+  }
+
+  const users = await prisma.user.findMany({
+    where: {
+      AND: [
+        { id: { not: currentUserId } },
+        {
+          OR: [
+            { username: { contains: trimmed, mode: "insensitive" } },
+            { email: { equals: trimmed, mode: "insensitive" } },
+          ],
+        },
+      ],
+    },
+    select: {
+      id: true,
+      username: true,
+      fullName: true,
+      email: true,
+      avatar: true,
+    },
+    take: 10,
+  });
+
+  return users;
+};
+

@@ -19,3 +19,8 @@ export const changePassword = (data) =>
 /** DELETE account permanent */
 export const deleteAccount = (password) =>
   API.delete('/user/delete-account', { data: { password } }).then((r) => r.data);
+
+/** GET search users by username or email */
+export const searchUsers = (query) =>
+  API.get(`/user/search?q=${encodeURIComponent(query)}`).then((r) => r.data.data);
+
