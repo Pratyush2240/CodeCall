@@ -4,6 +4,7 @@ import {
   updateUserProfile,
   changePassword,
   deleteUserAccount,
+  searchUsers,
 } from "./user.service.js";
 import catchAsync from "../../utils/catchAsync.js";
 
@@ -54,3 +55,13 @@ export const deleteAccount = catchAsync(async (req, res) => {
   const result = await deleteUserAccount(req.user.id, password);
   res.status(200).json({ status: "success", ...result });
 });
+
+/**
+ * GET /api/user/search?q=...
+ * Search registered users by username or email.
+ */
+export const searchUsersHandler = catchAsync(async (req, res) => {
+  const query = req.query.q;
+  const results = await searchUsers(query, req.user.id);
+  res.status(200).json({ status: "success", data: results });
+});

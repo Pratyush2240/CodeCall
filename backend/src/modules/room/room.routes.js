@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { listRooms, createRoom, joinRoom, getRoom, endRoomHandler, renameRoomHandler, deleteRoomHandler } from './room.controller.js';
+import { createInvite, getRoomInvites } from '../invitation/invitation.controller.js';
 import { requireAuth } from '../../middlewares/requireAuth.js';
 
 const router = Router();
@@ -16,8 +17,15 @@ router.post('/', createRoom);
 /** POST /api/rooms/join — join a room by code */
 router.post('/join', joinRoom);
 
+/** POST /api/rooms/:roomId/invite — invite user to a room (owner only) */
+router.post('/:roomId/invite', createInvite);
+
+/** GET /api/rooms/:roomId/invitations — list invitations for a room (owner only) */
+router.get('/:roomId/invitations', getRoomInvites);
+
 /** PATCH /api/rooms/:roomId/end — end a room (admin only) */
 router.patch('/:roomId/end', endRoomHandler);
+
 
 /** PATCH /api/rooms/:roomId/rename — rename a room (creator only) */
 router.patch('/:roomId/rename', renameRoomHandler);

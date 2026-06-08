@@ -11,7 +11,9 @@ import { useCodeExecution } from '../hooks/useCodeExecution';
 import { useCursors } from '../hooks/useCursors';
 import CodeEditor from '../components/CodeEditor';
 import DSACanvas from '../components/DSACanvas';
+import InviteModal from '../components/InviteModal';
 import './RoomSession.css';
+
 
 /* ── Icons ────────────────────────────────────────────────────── */
 const LeaveIcon = () => (
@@ -236,6 +238,8 @@ export default function RoomSessionPage() {
   const [countdown, setCountdown] = useState(5);
   const [ending, setEnding]       = useState(false);   // PATCH in-flight
   const [showConfirm, setShowConfirm] = useState(false); // confirm dialog
+  const [showInviteModal, setShowInviteModal] = useState(false);
+
 
   /* Resolve logged-in user ID from the stored JWT payload */
   const currentUserId = (() => {
@@ -444,6 +448,19 @@ export default function RoomSessionPage() {
             </button>
           )}
 
+          {/* Invite — admin only, only when active */}
+          {isAdmin && !isEnded && (
+            <button
+              id="invite-users-btn"
+              className="rs-invite-header-btn"
+              onClick={() => setShowInviteModal(true)}
+              aria-label="Invite users"
+            >
+              <UsersIcon />
+              Invite
+            </button>
+          )}
+
           {/* Leave Room — always visible */}
           <button
             className="rs-leave-btn"
@@ -453,6 +470,7 @@ export default function RoomSessionPage() {
             <LeaveIcon />
             Leave Room
           </button>
+
 
           {/* Join/Leave Call */}
           {!isInCall ? (
@@ -508,6 +526,17 @@ export default function RoomSessionPage() {
           </div>
         </div>
       )}
+
+      {/* ── Invite modal ── */}
+      {showInviteModal && (
+        <InviteModal
+          isOpen={showInviteModal}
+          onClose={() => setShowInviteModal(false)}
+          roomId={roomId}
+          participants={participants}
+        />
+      )}
+
 
       {/* ── Video bar (shown when in call) ── */}
       {isInCall && (

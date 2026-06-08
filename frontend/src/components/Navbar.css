@@ -123,12 +123,33 @@
   border-radius: 7px;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
+  position: relative;
 }
 
 .navbar-icon-btn:hover {
   background: var(--color-bg);
   color: var(--color-text-primary);
 }
+
+.navbar-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: #EF4444;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #ffffff;
+  padding: 0 4px;
+  box-sizing: border-box;
+}
+
 
 /* ── Avatar + Dropdown ───────────────────────────── */
 .navbar-user-menu {

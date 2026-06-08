@@ -118,7 +118,29 @@
   cursor: not-allowed;
 }
 
+/* Invite — blue secondary button */
+.rs-invite-header-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: rgba(88, 166, 255, 0.12);
+  border: 1px solid rgba(88, 166, 255, 0.35);
+  color: #58A6FF;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.rs-invite-header-btn:hover {
+  background: rgba(88, 166, 255, 0.22);
+  border-color: #58A6FF;
+}
+
 .rs-leave-btn {
+
 
   display: flex;
   align-items: center;
