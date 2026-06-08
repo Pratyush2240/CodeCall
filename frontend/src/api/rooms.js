@@ -2,11 +2,14 @@ import API from './axios';
 
 /**
  * POST /rooms
- * Creates a new room, optionally linked to a project.
+ * Creates a new room, optionally with a custom name and linked to a project.
+ * @param {string} [name]      — optional room name
  * @param {string} [projectId]
  */
-export async function createRoom(projectId = null) {
-  const body = projectId ? { projectId } : {};
+export async function createRoom(name = null, projectId = null) {
+  const body = {};
+  if (name && name.trim()) body.name = name.trim();
+  if (projectId) body.projectId = projectId;
   const { data } = await API.post('/rooms', body);
   return data;
 }
@@ -25,9 +28,12 @@ export async function joinRoom(code) {
  * GET /rooms
  * Fetches the list of rooms the current user has access to.
  * @param {string} [projectId] — optional filter
+ * @param {number} [limit]     — optional max rooms
  */
-export async function getRooms(projectId = null) {
-  const params = projectId ? { projectId } : {};
+export async function getRooms(projectId = null, limit = null) {
+  const params = {};
+  if (projectId) params.projectId = projectId;
+  if (limit) params.limit = limit;
   const { data } = await API.get('/rooms', { params });
   return data;
 }
@@ -48,4 +54,24 @@ export async function getRoom(roomId) {
 export async function endRoom(roomId) {
   const { data } = await API.patch(`/rooms/${roomId}/end`);
   return data;
+}
+
+/**
+ * PATCH /rooms/:roomId/rename
+ * Renames a room. Only the creator can call this.
+ * @param {string} roomId
+ * @param {string} name
+ */
+export async function renameRoom(roomId, name) {
+  const { data } = await API.patch(`/rooms/${roomId}/rename`, { name });
+  return data;
+}
+
+/**
+ * DELETE /rooms/:roomId
+ * Permanently deletes a room. Only the creator can call this.
+ * @param {string} roomId
+ */
+export async function deleteRoom(roomId) {
+  await API.delete(`/rooms/${roomId}`);
 }
