@@ -116,7 +116,7 @@ export default function SignupPage() {
     <main className="login-page" role="main">
       <header className="login-header">
         <div className="logo-bubble"><TerminalIcon /></div>
-        <span className="brand-label">CodeCall Enterprise</span>
+        <span className="brand-label">CodeCall</span>
         <h1 className="login-heading">Create Account</h1>
         <p className="login-subtitle">Register for your secure development environment.</p>
       </header>
@@ -239,9 +239,9 @@ export default function SignupPage() {
       <footer className="login-footer">
         <p>
           © 2026 CodeCall Inc. &nbsp;·&nbsp;
-          <a href="#privacy">Privacy</a> &nbsp;·&nbsp;
-          <a href="#terms">Terms</a> &nbsp;·&nbsp;
-          <a href="#security">Security</a>
+          <Link to="/privacy">Privacy</Link> &nbsp;·&nbsp;
+          <Link to="/terms">Terms</Link> &nbsp;·&nbsp;
+          <Link to="/security">Security</Link>
         </p>
       </footer>
     </main>

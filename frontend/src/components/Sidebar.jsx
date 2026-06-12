@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { getAvatarMeta } from '../context/UserContext';
 import { getRecentCollaborators } from '../api/users';
 import InviteModal from './InviteModal';
@@ -193,12 +194,12 @@ export default function Sidebar() {
 
       {/* Footer Links */}
       <div className="sidebar-footer">
-        <a href="#help" className="sidebar-link">
+        <Link to="/help" className="sidebar-link">
           <HelpIcon /> Help Center
-        </a>
-        <a href="#docs" className="sidebar-link">
+        </Link>
+        <Link to="/docs" className="sidebar-link">
           <DocsIcon /> API Docs
-        </a>
+        </Link>
       </div>
     </aside>
   );

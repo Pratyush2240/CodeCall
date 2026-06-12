@@ -1,0 +1,234 @@
+/* =====================================================
+   Static Document Pages — Shared Styles
+   ===================================================== */
+
+.static-doc-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: var(--space-2xl) var(--space-md);
+  background: var(--color-bg);
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(37,99,235,0.07) 0%, transparent 70%);
+  position: relative;
+  isolation: isolate;
+}
+
+/* ─── Header (above card) ────────────────────────── */
+.static-doc-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: var(--space-xl);
+  text-align: center;
+}
+
+.static-doc-header .logo-bubble {
+  width: 52px;
+  height: 52px;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-icon);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  margin-bottom: var(--space-md);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.static-doc-header .logo-bubble:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37,99,235,0.14);
+}
+
+.static-doc-header .logo-bubble svg {
+  width: 24px;
+  height: 24px;
+  color: var(--color-accent);
+}
+
+.static-doc-header .brand-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  margin-bottom: 14px;
+}
+
+.static-doc-heading {
+  font-size: clamp(28px, 5vw, 36px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--color-text-primary);
+  line-height: 1.15;
+  margin-bottom: var(--space-sm);
+}
+
+.static-doc-subtitle {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.01em;
+}
+
+/* ─── Card Container ──────────────────────────────── */
+.static-doc-card {
+  width: 100%;
+  max-width: 800px;
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--color-border);
+  padding: var(--space-xl) var(--space-xl);
+  margin-bottom: var(--space-xl);
+  animation: staticCardIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes staticCardIn {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Back / Return Link ──────────────────────────── */
+.static-doc-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-accent);
+  text-decoration: none;
+  margin-bottom: var(--space-lg);
+  align-self: flex-start;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.static-doc-back-link:hover {
+  color: var(--color-accent-hover);
+  transform: translateX(-2px);
+}
+
+/* ─── Document Content Layout ──────────────────────── */
+.static-doc-content {
+  color: var(--color-text-primary);
+  line-height: 1.6;
+}
+
+.static-doc-content h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-top: var(--space-xl);
+  margin-bottom: var(--space-md);
+  letter-spacing: -0.02em;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-xs);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.static-doc-content h2::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 18px;
+  background: var(--color-accent);
+  border-radius: 2px;
+}
+
+.static-doc-content p {
+  font-size: 14.5px;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-md);
+}
+
+.static-doc-content ul {
+  margin-bottom: var(--space-md);
+  padding-left: var(--space-xl);
+}
+
+.static-doc-content li {
+  font-size: 14.5px;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+.static-doc-content strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+/* ─── Custom Highlight Callouts ─────────────────────── */
+.static-doc-callout {
+  background: var(--color-input-bg);
+  border-left: 3px solid var(--color-accent);
+  padding: var(--space-md);
+  border-radius: 0 var(--radius-input) var(--radius-input) 0;
+  margin-bottom: var(--space-lg);
+}
+
+.static-doc-callout p {
+  margin-bottom: 0;
+  font-size: 13.5px;
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+/* ─── Footer ───────────────────────────────────────── */
+.static-doc-footer {
+  text-align: center;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: var(--space-lg);
+  margin-bottom: var(--space-lg);
+  width: 100%;
+}
+
+.static-doc-footer a {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.static-doc-footer a:hover {
+  color: var(--color-accent);
+}
+
+/* ─── Table / Feature Details ───────────────────────── */
+.static-doc-table-wrapper {
+  overflow-x: auto;
+  margin-bottom: var(--space-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-input);
+}
+
+.static-doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13.5px;
+}
+
+.static-doc-table th {
+  background: var(--color-input-bg);
+  padding: var(--space-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.static-doc-table td {
+  padding: var(--space-md);
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.static-doc-table tr:last-child td {
+  border-bottom: none;
+}
