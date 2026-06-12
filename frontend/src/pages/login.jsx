@@ -128,7 +128,7 @@ export default function LoginPage() {
         <div className="logo-bubble" aria-label="CodeCall logo">
           <TerminalIcon />
         </div>
-        <span className="brand-label">CodeCall Enterprise</span>
+        <span className="brand-label">CodeCall</span>
         <h1 className="login-heading">Access the Terminal</h1>
         <p className="login-subtitle">Sign in to your secure development environment.</p>
       </header>
@@ -303,9 +303,9 @@ export default function LoginPage() {
       <footer className="login-footer">
         <p>
           © 2026 CodeCall Inc. &nbsp;·&nbsp;
-          <a href="#privacy">Privacy</a> &nbsp;·&nbsp;
-          <a href="#terms">Terms</a> &nbsp;·&nbsp;
-          <a href="#security">Security</a>
+          <Link to="/privacy">Privacy</Link> &nbsp;·&nbsp;
+          <Link to="/terms">Terms</Link> &nbsp;·&nbsp;
+          <Link to="/security">Security</Link>
         </p>
       </footer>
 

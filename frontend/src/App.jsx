@@ -12,6 +12,11 @@ import RoomSessionPage       from './pages/RoomSession';
 import OAuthCallbackPage     from './pages/OAuthCallback';
 import CompleteProfilePage   from './pages/CompleteProfile';
 import SettingsPage          from './pages/Settings';
+import PrivacyPage           from './pages/Privacy';
+import TermsPage             from './pages/Terms';
+import SecurityPage          from './pages/Security';
+import HelpPage              from './pages/Help';
+import ApiDocsPage           from './pages/ApiDocs';
 import ProtectedRoute        from './components/ProtectedRoute';
 
 function App() {
@@ -26,6 +31,11 @@ function App() {
           <Route path="/forgot-password"       element={<ForgotPasswordPage />} />
           <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
           <Route path="/oauth/callback"        element={<OAuthCallbackPage />} />
+          <Route path="/privacy"               element={<PrivacyPage />} />
+          <Route path="/terms"                 element={<TermsPage />} />
+          <Route path="/security"              element={<SecurityPage />} />
+          <Route path="/help"                  element={<HelpPage />} />
+          <Route path="/docs"                  element={<ApiDocsPage />} />
 
           {/* ─── Onboarding (auth required, profile not yet complete) ── */}
           <Route path="/complete-profile"      element={<CompleteProfilePage />} />
