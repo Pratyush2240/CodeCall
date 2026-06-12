@@ -317,3 +317,14 @@
   from { opacity: 1; }
   to { opacity: 0; }
 }
+
+.room-auto-ended-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #EF4444;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

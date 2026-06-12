@@ -256,6 +256,17 @@ export default function RoomSessionPage() {
   /* ── Socket connection ── */
   const { socket, isConnected } = useSocket(roomId);
 
+  useEffect(() => {
+    if (!socket) return;
+    const handleRoomExpired = () => {
+      setError("This room has expired due to inactivity.");
+    };
+    socket.on("room-expired", handleRoomExpired);
+    return () => {
+      socket.off("room-expired", handleRoomExpired);
+    };
+  }, [socket]);
+
   /* ── Realtime presence ── */
   const { onlineUsers, typingUsers, emitTyping } = usePresence(socket, roomId);
 
