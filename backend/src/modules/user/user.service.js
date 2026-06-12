@@ -53,7 +53,7 @@ export const getRecentCollaborators = async (userId, limit = 12) => {
 
   const roomIds = userRooms.map((r) => r.roomId);
 
-  // Step 2: Get other participants from those rooms, ordered by room lastActivity
+  // Step 2: Get other participants from those rooms, ordered by room lastActivityAt
   const participants = await prisma.roomParticipant.findMany({
     where: {
       roomId: { in: roomIds },
@@ -63,7 +63,7 @@ export const getRecentCollaborators = async (userId, limit = 12) => {
       userId: true,
       joinedAt: true,
       room: {
-        select: { lastActivity: true },
+        select: { lastActivityAt: true },
       },
       user: {
         select: {
@@ -76,9 +76,10 @@ export const getRecentCollaborators = async (userId, limit = 12) => {
       },
     },
     orderBy: {
-      room: { lastActivity: "desc" },
+      room: { lastActivityAt: "desc" },
     },
   });
+
 
   // Step 3: Deduplicate by userId (keep most recent occurrence)
   const seen = new Set();

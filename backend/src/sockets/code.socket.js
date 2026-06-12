@@ -1,6 +1,10 @@
+import { touchRoom } from "../modules/room/room.service.js";
+
 // Handles realtime collaborative code editing within a room.
 export const registerCodeEvents = (io, socket) => {
   socket.on("code-change", ({ roomId, code }) => {
+    touchRoom(roomId).catch((err) => console.error("Failed to touch room on code change:", err));
+
     // Broadcast updated code to everyone else in the room
     socket.to(roomId).emit("code-update", {
       code,

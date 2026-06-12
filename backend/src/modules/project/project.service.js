@@ -56,7 +56,7 @@ export async function getProjectById(id, userId) {
           createdBy: { select: { id: true, username: true } },
           _count: { select: { participants: true } },
         },
-        orderBy: { lastActivity: "desc" },
+        orderBy: { lastActivityAt: "desc" },
       },
     },
   });
@@ -83,10 +83,12 @@ export async function getProjectById(id, userId) {
       createdBy: r.createdBy,
       participantCount: r._count.participants,
       createdAt: r.createdAt,
-      lastActivity: r.lastActivity,
+      lastActivity: r.lastActivityAt,
+      lastActivityAt: r.lastActivityAt,
       endedAt: r.endedAt,
     })),
   };
+
 }
 
 /**

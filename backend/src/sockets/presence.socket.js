@@ -1,4 +1,6 @@
 // ─── Realtime presence tracking per room ───────────────────────
+import { touchRoom } from "../modules/room/room.service.js";
+
 // In-memory state — tracks who is connected to which room.
 
 // roomId → Map<socketId, { userId, joinedAt }>
@@ -60,6 +62,8 @@ export function trackJoin(io, socket, roomId) {
 
   const users = getRoomUserList(roomId);
   io.to(roomId).emit("presence:update", { users, roomId });
+
+  touchRoom(roomId).catch((err) => console.error("Failed to touch room on join:", err));
 
   console.log(`👥 Presence: ${users.length} user(s) in room ${roomId}`);
 }

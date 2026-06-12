@@ -139,7 +139,7 @@ const iconCycle = [
 ];
 
 export default function RoomCard({ room, index = 0, isOwner = false, onRename, onDelete }) {
-  const { name, code, status, lastActivity, lastUpdated, participants } = room;
+  const { name, code, status, lastActivity, lastUpdated, participants, endedAt } = room;
   const { icon, color } = iconCycle[index % iconCycle.length];
   const navigate = useNavigate();
 
@@ -289,10 +289,18 @@ export default function RoomCard({ room, index = 0, isOwner = false, onRename, o
           <span className={`room-status room-status--${status}`}>
             {isEnded ? '⏹ ENDED' : '● ACTIVE'}
           </span>
+          {isEnded && room.autoEnded && (
+            <>
+              <span className="room-meta-divider">·</span>
+              <span className="room-auto-ended-label">Auto Ended</span>
+            </>
+          )}
           <span className="room-meta-divider">·</span>
           <span className="room-code-tag" title="Invite code">📋 {code}</span>
           <span className="room-meta-divider">·</span>
-          <span className="room-updated">{displayTime}</span>
+          <span className="room-updated">
+            {isEnded ? `Ended At: ${timeAgo(endedAt)}` : `Last Activity: ${displayTime}`}
+          </span>
           <span className="room-meta-divider">·</span>
           <span className="room-participants">{participants} participants</span>
         </div>

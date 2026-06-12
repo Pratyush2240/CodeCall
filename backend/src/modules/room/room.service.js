@@ -30,7 +30,7 @@ export async function getRoomsForUser(userId, projectId = null, limit = null) {
       createdBy: { select: { id: true, username: true } },
       _count: { select: { participants: true } },
     },
-    orderBy: { lastActivity: "desc" },
+    orderBy: { lastActivityAt: "desc" },
   };
   if (limit && Number.isInteger(limit) && limit > 0) {
     query.take = limit;
@@ -38,20 +38,36 @@ export async function getRoomsForUser(userId, projectId = null, limit = null) {
 
   const rooms = await prisma.room.findMany(query);
 
-  return rooms.map((r) => ({
-    id: r.id,
-    name: r.name,
-    code: r.code,
-    status: r.status,
-    createdBy: r.createdById,
-    createdByName: r.createdBy.username,
-    participants: r._count.participants,
-    projectId: r.projectId,
-    lastUpdated: r.updatedAt.toISOString(),
-    lastActivity: r.lastActivity.toISOString(),
-    createdAt: r.createdAt.toISOString(),
-    endedAt: r.endedAt?.toISOString() || null,
-  }));
+  // We should also run active room expiration during listing to be safe
+  for (const room of rooms) {
+    if (room.status === "ACTIVE" && Date.now() - new Date(room.lastActivityAt).getTime() > 3 * 60 * 60 * 1000) {
+      room.status = "ENDED";
+      room.endedAt = new Date();
+      expireRoom(room.id).catch(err => console.error("Auto expire during list failed:", err));
+    }
+  }
+
+  return rooms.map((r) => {
+    const isAutoEnded = r.status === "ENDED" && r.endedAt && r.lastActivityAt && 
+      (new Date(r.endedAt).getTime() - new Date(r.lastActivityAt).getTime() >= 3 * 60 * 60 * 1000 - 10000);
+    return {
+      id: r.id,
+      name: r.name,
+      code: r.code,
+      status: r.status,
+      createdBy: r.createdById,
+      createdByName: r.createdBy.username,
+      participants: r._count.participants,
+      projectId: r.projectId,
+      lastUpdated: r.updatedAt.toISOString(),
+      lastActivity: r.lastActivityAt.toISOString(),
+      lastActivityAt: r.lastActivityAt.toISOString(),
+      createdAt: r.createdAt.toISOString(),
+      endedAt: r.endedAt?.toISOString() || null,
+      autoEnded: isAutoEnded,
+    };
+  });
+
 }
 
 /**
@@ -105,9 +121,12 @@ export async function createRoomForUser(userId, projectId = null, name = null) {
     participants: [userId],
     projectId: room.projectId,
     lastUpdated: room.updatedAt.toISOString(),
-    lastActivity: room.lastActivity.toISOString(),
+    lastActivity: room.lastActivityAt.toISOString(),
+    lastActivityAt: room.lastActivityAt.toISOString(),
     createdAt: room.createdAt.toISOString(),
+    autoEnded: false,
   };
+
 }
 
 /**
@@ -122,6 +141,10 @@ export async function joinRoomByCode(code, userId) {
   });
 
   if (!room) throw new AppError("Room not found. Check the code and try again.", 404);
+
+  // Lazy expiration check
+  await checkAndExpireRoom(room);
+
   if (room.status === "ENDED") throw new AppError("This room has ended.", 410);
 
   // Upsert participant
@@ -135,7 +158,7 @@ export async function joinRoomByCode(code, userId) {
   // Touch activity
   const updated = await prisma.room.update({
     where: { id: room.id },
-    data: { lastActivity: new Date() },
+    data: { lastActivityAt: new Date() },
     include: {
       createdBy: { select: { id: true, username: true } },
       participants: { select: { userId: true } },
@@ -151,9 +174,12 @@ export async function joinRoomByCode(code, userId) {
     participants: updated.participants.map((p) => p.userId),
     projectId: updated.projectId,
     lastUpdated: updated.updatedAt.toISOString(),
-    lastActivity: updated.lastActivity.toISOString(),
+    lastActivity: updated.lastActivityAt.toISOString(),
+    lastActivityAt: updated.lastActivityAt.toISOString(),
     createdAt: updated.createdAt.toISOString(),
+    autoEnded: false,
   };
+
 }
 
 /**
@@ -170,15 +196,21 @@ export async function getRoomById(id, userId) {
 
   if (!room) throw new AppError("Room not found.", 404);
 
+  // Lazy expiration check
+  await checkAndExpireRoom(room);
+
   // Block re-entry to ended rooms
   if (room.status === "ENDED") {
-    throw new AppError("This room has ended and can no longer be joined.", 410);
+    throw new AppError("This room has expired due to inactivity.", 410);
   }
 
   const isParticipant = room.participants.some((p) => p.userId === userId);
   if (!isParticipant) {
     throw new AppError("You are not a participant of this room.", 403);
   }
+
+  const isAutoEnded = room.status === "ENDED" && room.endedAt && room.lastActivityAt && 
+    (new Date(room.endedAt).getTime() - new Date(room.lastActivityAt).getTime() >= 3 * 60 * 60 * 1000 - 10000);
 
   return {
     id: room.id,
@@ -190,9 +222,11 @@ export async function getRoomById(id, userId) {
     participants: room.participants.map((p) => p.userId),
     projectId: room.projectId,
     lastUpdated: room.updatedAt.toISOString(),
-    lastActivity: room.lastActivity.toISOString(),
+    lastActivity: room.lastActivityAt.toISOString(),
+    lastActivityAt: room.lastActivityAt.toISOString(),
     createdAt: room.createdAt.toISOString(),
     endedAt: room.endedAt?.toISOString() || null,
+    autoEnded: isAutoEnded,
   };
 }
 
@@ -214,9 +248,16 @@ export async function endRoom(id, userId) {
     data: {
       status: "ENDED",
       endedAt: new Date(),
-      lastActivity: new Date(),
+      lastActivityAt: new Date(),
     },
   });
+
+  try {
+    const { disconnectRoomSockets } = await import("../../sockets/index.js");
+    disconnectRoomSockets(id);
+  } catch (err) {
+    console.error(`Failed to disconnect sockets for manually ended room ${id}:`, err);
+  }
 
   return {
     id: updated.id,
@@ -224,6 +265,7 @@ export async function endRoom(id, userId) {
     status: updated.status,
     endedAt: updated.endedAt.toISOString(),
     lastUpdated: updated.updatedAt.toISOString(),
+    autoEnded: false,
   };
 }
 
@@ -246,7 +288,10 @@ export async function renameRoom(roomId, userId, newName) {
 
   const updated = await prisma.room.update({
     where: { id: roomId },
-    data: { name: newName.trim() },
+    data: { 
+      name: newName.trim(),
+      lastActivityAt: new Date(),
+    },
   });
 
   return {
@@ -275,15 +320,86 @@ export async function deleteRoom(roomId, userId) {
 }
 
 /**
- * Updates lastActivity timestamp. Called from socket events.
+ * Updates lastActivityAt timestamp. Called from socket events.
  */
 export async function touchRoom(roomId) {
   try {
     await prisma.room.update({
       where: { id: roomId },
-      data: { lastActivity: new Date() },
+      data: { lastActivityAt: new Date() },
     });
   } catch {
     // Room may not exist in DB yet — silently ignore
+  }
+}
+
+/**
+ * Helper to check if a room is stale and expire it lazily.
+ */
+export async function checkAndExpireRoom(room) {
+  if (room.status === "ACTIVE") {
+    const elapsed = Date.now() - new Date(room.lastActivityAt).getTime();
+    const threeHours = 3 * 60 * 60 * 1000;
+    if (elapsed > threeHours) {
+      await expireRoom(room.id);
+      throw new AppError("This room has expired due to inactivity.", 410);
+    }
+  } else if (room.status === "ENDED") {
+    if (room.endedAt && room.lastActivityAt) {
+      const diff = new Date(room.endedAt).getTime() - new Date(room.lastActivityAt).getTime();
+      if (diff >= 3 * 60 * 60 * 1000 - 10000) {
+        throw new AppError("This room has expired due to inactivity.", 410);
+      }
+    }
+  }
+}
+
+/**
+ * Expires a specific room. Marks status as ENDED and disconnects sockets.
+ */
+export async function expireRoom(roomId) {
+  const updated = await prisma.room.update({
+    where: { id: roomId },
+    data: {
+      status: "ENDED",
+      endedAt: new Date(),
+    },
+  });
+
+  try {
+    const { disconnectRoomSockets } = await import("../../sockets/index.js");
+    disconnectRoomSockets(roomId);
+  } catch (err) {
+    console.error(`Failed to disconnect sockets for expired room ${roomId}:`, err);
+  }
+
+  return updated;
+}
+
+/**
+ * Scans for active rooms with no activity in the last 3 hours and expires them.
+ */
+export async function expireStaleRooms() {
+  const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  try {
+    const staleRooms = await prisma.room.findMany({
+      where: {
+        status: "ACTIVE",
+        lastActivityAt: {
+          lt: threeHoursAgo,
+        },
+      },
+    });
+
+    for (const room of staleRooms) {
+      try {
+        await expireRoom(room.id);
+        console.log(`[auto-expiry] Room ${room.id} (${room.name}) expired due to inactivity.`);
+      } catch (err) {
+        console.error(`[auto-expiry] Failed to expire room ${room.id}:`, err);
+      }
+    }
+  } catch (err) {
+    console.error("[auto-expiry] Background scan query failed:", err);
   }
 }
