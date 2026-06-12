@@ -195,8 +195,9 @@ export async function acceptInvitation(invitationId, userId) {
     }),
     prisma.room.update({
       where: { id: invitation.roomId },
-      data: { lastActivity: new Date() },
+      data: { lastActivityAt: new Date() },
     }),
+
   ]);
 
   return invitation.room;

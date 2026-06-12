@@ -19,6 +19,29 @@ import { registerCursorEvents } from "./cursor.socket.js";
  * @param {import("http").Server} server
  * @returns {import("socket.io").Server}
  */
+let ioInstance = null;
+
+/**
+ * Disconnect all sockets in a room and notify them of expiration.
+ */
+export const disconnectRoomSockets = (roomId) => {
+  if (ioInstance) {
+    ioInstance.to(roomId).emit("room-expired");
+    ioInstance.in(roomId).disconnectSockets(true);
+    console.log(`🔌 Disconnected all sockets in room ${roomId} due to expiration`);
+  }
+};
+
+/**
+ * Initialise Socket.IO on the existing HTTP server.
+ *
+ * All realtime features use the backend's room system (roomId).
+ * Feature handlers are registered as modular plugins — add new
+ * files (e.g. chat.socket.js) and register them here.
+ *
+ * @param {import("http").Server} server
+ * @returns {import("socket.io").Server}
+ */
 export const initSocket = (server) => {
   const io = new Server(server, {
     cors: {
@@ -27,6 +50,8 @@ export const initSocket = (server) => {
       credentials: true,
     },
   });
+
+  ioInstance = io;
 
   // ─── JWT authentication middleware ───────────────────────
   io.use((socket, next) => {
@@ -52,13 +77,26 @@ export const initSocket = (server) => {
     console.log(`⚡ Socket connected: ${socket.id} (user: ${socket.user.userId})`);
 
     // ── Join a room ───────────────────────────────────────
-    socket.on("join-room", ({ roomId }) => {
-      socket.join(roomId);
+    socket.on("join-room", async ({ roomId }) => {
+      try {
+        const { getRoomById, touchRoom } = await import("../modules/room/room.service.js");
+        await getRoomById(roomId, socket.user.userId);
+        await touchRoom(roomId);
 
-      // Track presence — broadcasts updated user list
-      trackJoin(io, socket, roomId);
+        socket.join(roomId);
 
-      console.log(`🏠 User ${socket.user.userId} joined room ${roomId}`);
+        // Track presence — broadcasts updated user list
+        trackJoin(io, socket, roomId);
+
+        console.log(`🏠 User ${socket.user.userId} joined room ${roomId}`);
+      } catch (err) {
+        console.error(`[socket] ❌ Error joining room: ${err.message}`);
+        socket.emit("error", { message: err.message || "Failed to join room" });
+        if (err.statusCode === 410 || err.message.includes("expired") || err.message.includes("ended")) {
+          socket.emit("room-expired");
+        }
+        socket.disconnect(true);
+      }
     });
 
     // ── Feature-specific event handlers ───────────────────

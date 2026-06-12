@@ -1,7 +1,11 @@
+import { touchRoom } from "../modules/room/room.service.js";
+
 // Handles realtime room-scoped chat messages.
 export const registerChatEvents = (io, socket) => {
   socket.on("send-message", ({ roomId, text }) => {
     if (!text || !text.trim()) return;
+
+    touchRoom(roomId).catch((err) => console.error("Failed to touch room on message sent:", err));
 
     const message = {
       id: `${socket.id}-${Date.now()}`,
