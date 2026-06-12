@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import API from '../api/axios';
 import './Login.css';
 import './CompleteProfile.css';
@@ -378,7 +378,12 @@ export default function CompleteProfilePage() {
       </div>
 
       <footer className="login-footer">
-        <p>© 2026 CodeCall Inc. &nbsp;·&nbsp;<a href="#privacy">Privacy</a> &nbsp;·&nbsp;<a href="#terms">Terms</a></p>
+        <p>
+          © 2026 CodeCall Inc. &nbsp;·&nbsp;
+          <Link to="/privacy">Privacy</Link> &nbsp;·&nbsp;
+          <Link to="/terms">Terms</Link> &nbsp;·&nbsp;
+          <Link to="/security">Security</Link>
+        </p>
       </footer>
     </main>
   );
