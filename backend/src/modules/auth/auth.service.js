@@ -273,6 +273,10 @@ export const forgotPassword = async (email) => {
   // For now, log the reset link for development.
   const resetUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password/${rawToken}`;
 
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[DEV] Reset URL:", resetUrl);
+  }
+
   // Send the email
   try {
     await sendResetEmail(email, resetUrl);
