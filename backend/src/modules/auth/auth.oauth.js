@@ -161,7 +161,7 @@ export const githubStrategy = new GitHubStrategy(
   {
     clientID: env.GITHUB_CLIENT_ID || "placeholder",
     clientSecret: env.GITHUB_CLIENT_SECRET || "placeholder",
-    callbackURL: "http://localhost:5000/api/auth/github/callback",
+    callbackURL: `${process.env.RENDER_EXTERNAL_URL || "http://localhost:5000"}/api/auth/github/callback`,
     scope: ["user:email"],        // request email access
     passReqToCallback: true,      // allows req.query in strategy verification
   },
@@ -185,7 +185,7 @@ export const googleStrategy = new GoogleStrategy(
   {
     clientID: env.GOOGLE_CLIENT_ID || "placeholder",
     clientSecret: env.GOOGLE_CLIENT_SECRET || "placeholder",
-    callbackURL: "http://localhost:5000/api/auth/google/callback",
+    callbackURL: `${process.env.RENDER_EXTERNAL_URL || "http://localhost:5000"}/api/auth/google/callback`,
     scope: ["profile", "email"],
     passReqToCallback: true,      // allows req.query in strategy verification
   },
