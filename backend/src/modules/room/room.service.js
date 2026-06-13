@@ -1,5 +1,6 @@
 import prisma from "../../config/prisma.js";
 import AppError from "../../utils/appError.js";
+import crypto from "crypto";
 
 /**
  * Generate a short, human-readable invite code.
