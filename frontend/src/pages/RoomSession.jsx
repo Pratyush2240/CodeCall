@@ -620,7 +620,7 @@ export default function RoomSessionPage() {
           </div>
 
           {/* Code editor — IDE layout */}
-          {activeTab === 'editor' && (
+          <div style={{ display: activeTab === 'editor' ? 'flex' : 'none', flexDirection: 'column', flex: 1, minHeight: 0 }}>
             <CodeEditor
               value={code}
               onChange={handleEditorChange}
@@ -634,11 +634,10 @@ export default function RoomSessionPage() {
               stdinRef={stdinRef}
               onEditorMount={setEditorInstance}
             />
-          )}
+          </div>
 
           {/* Whiteboard canvas */}
-          {activeTab === 'whiteboard' && (
-            <div className="rs-wb-container">
+          <div className="rs-wb-container" style={{ display: activeTab === 'whiteboard' ? 'flex' : 'none' }}>
               {/* Toolbar */}
               <div className="rs-wb-toolbar">
                 <button
@@ -712,13 +711,12 @@ export default function RoomSessionPage() {
                   style={{ cursor: wbTool === 'eraser' ? 'cell' : 'crosshair' }}
                 />
               </div>
-            </div>
-          )}
+          </div>
 
           {/* DSA Visualization board */}
-          {activeTab === 'dsa' && (
+          <div style={{ display: activeTab === 'dsa' ? 'flex' : 'none', flexDirection: 'column', flex: 1, minHeight: 0 }}>
             <DSACanvas socket={socket} roomId={roomId} />
-          )}
+          </div>
 
           {/* Status bar — dynamic values only */}
           <div className="rs-status-bar" aria-label="Session status">

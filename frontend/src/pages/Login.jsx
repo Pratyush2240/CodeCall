@@ -151,7 +151,7 @@ export default function LoginPage() {
                 id="email-input"
                 className="form-input"
                 type="text"
-                autoComplete="username"
+                autoComplete="off"
                 placeholder="jane@codecall.io or jane_doe"
                 value={identifier}
                 onChange={e => setIdentifier(e.target.value)}
@@ -175,7 +175,7 @@ export default function LoginPage() {
                 id="password-input"
                 className="form-input"
                 type={showPwd ? 'text' : 'password'}
-                autoComplete="current-password"
+                autoComplete="new-password"
                 placeholder="••••••••••"
                 value={password}
                 onChange={e => setPassword(e.target.value)}

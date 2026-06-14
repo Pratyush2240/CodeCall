@@ -43,9 +43,11 @@ export const disconnectRoomSockets = (roomId) => {
  * @returns {import("socket.io").Server}
  */
 export const initSocket = (server) => {
+  const allowedOrigin = process.env.CLIENT_URL || "http://localhost:5173";
+
   const io = new Server(server, {
     cors: {
-      origin: "http://localhost:5173",
+      origin: allowedOrigin,
       methods: ["GET", "POST"],
       credentials: true,
     },
