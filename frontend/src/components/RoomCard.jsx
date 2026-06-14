@@ -271,7 +271,7 @@ export default function RoomCard({ room, index = 0, isOwner = false, onRename, o
               disabled={renameLoading}
               aria-label="Confirm rename"
             >
-              <CheckIcon />
+              <CheckIcon /> Save
             </button>
             <button
               className="room-rename-action room-rename-action--cancel"
@@ -279,7 +279,7 @@ export default function RoomCard({ room, index = 0, isOwner = false, onRename, o
               disabled={renameLoading}
               aria-label="Cancel rename"
             >
-              <CloseIcon />
+              Cancel
             </button>
           </div>
         ) : (

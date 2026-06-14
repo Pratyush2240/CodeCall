@@ -251,18 +251,23 @@ export default function DashboardPage() {
                 <p className="action-error" role="alert">{createError}</p>
               )}
 
-              <input
-                id="room-name-input"
-                type="text"
-                className="join-input"
-                placeholder="Room name (optional)"
-                value={roomName}
-                onChange={(e) => setRoomName(e.target.value)}
-                disabled={creating}
-                style={{ marginBottom: '10px' }}
-                aria-label="Room name"
-                maxLength={50}
-              />
+              <div className="create-room-field">
+                <label className="create-room-label" htmlFor="room-name-input">
+                  Session Name
+                  <span className="create-room-optional">Optional</span>
+                </label>
+                <input
+                  id="room-name-input"
+                  type="text"
+                  className="join-input"
+                  placeholder="e.g. Sprint Review, DSA Practice…"
+                  value={roomName}
+                  onChange={(e) => setRoomName(e.target.value)}
+                  disabled={creating}
+                  aria-label="Room name"
+                  maxLength={50}
+                />
+              </div>
 
               <button
                 id="create-room-btn"
