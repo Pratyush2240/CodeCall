@@ -92,73 +92,96 @@
   border: 1px solid rgba(88, 166, 255, 0.3);
 }
 
-/* End Room — red destructive button */
+/* End Room — deep slate/crimson destruct button with glowing hover */
 .rs-end-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 14px;
-  background: rgba(248, 81, 73, 0.12);
-  border: 1px solid rgba(248, 81, 73, 0.35);
-  color: #F85149;
+  padding: 7px 15px;
+  background: linear-gradient(135deg, #1f1214, #3b1115);
+  border: 1.5px solid rgba(255, 74, 90, 0.45);
+  color: #ff6b7a;
   font-size: 13px;
   font-weight: 600;
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  box-shadow: 0 2px 8px rgba(255, 74, 90, 0.1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .rs-end-btn:hover:not(:disabled) {
-  background: rgba(248, 81, 73, 0.22);
-  border-color: #F85149;
+  background: linear-gradient(135deg, #ff4a5a, #d32f2f);
+  border-color: #ff4a5a;
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(255, 74, 90, 0.45);
+  transform: translateY(-1px);
+}
+
+.rs-end-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97);
 }
 
 .rs-end-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
-/* Invite — blue secondary button */
+/* Invite — high-tech violet/indigo button with glow */
 .rs-invite-header-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 14px;
-  background: rgba(88, 166, 255, 0.12);
-  border: 1px solid rgba(88, 166, 255, 0.35);
-  color: #58A6FF;
+  padding: 7px 15px;
+  background: linear-gradient(135deg, #2a1b4e, #4c2d91);
+  border: 1.5px solid rgba(124, 58, 237, 0.45);
+  color: #a78bfa;
   font-size: 13px;
   font-weight: 600;
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .rs-invite-header-btn:hover {
-  background: rgba(88, 166, 255, 0.22);
-  border-color: #58A6FF;
+  background: linear-gradient(135deg, #7c3aed, #5b21b6);
+  border-color: #8b5cf6;
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.45);
+  transform: translateY(-1px);
 }
 
+.rs-invite-header-btn:active {
+  transform: translateY(1px) scale(0.97);
+}
+
+/* Leave Room — sleek glassmorphic navigation exit button */
 .rs-leave-btn {
-
-
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 14px;
-  background: #21262D;
-  border: 1px solid #30363D;
-  color: #E6EDF3;
+  padding: 7px 15px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
   font-size: 13px;
   font-weight: 600;
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .rs-leave-btn:hover {
-  background: #2D3139;
-  border-color: #8B949E;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.05);
+  transform: translateY(-1px);
+}
+
+.rs-leave-btn:active {
+  transform: translateY(1px) scale(0.97);
 }
 
 /* ── Body ── */
@@ -844,35 +867,53 @@
 /* ════════════════════════════════════
    Call button (header)
    ════════════════════════════════════ */
+/* ── Call button (header) ── */
 .rs-call-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 14px;
-  background: rgba(63, 185, 80, 0.12);
-  border: 1px solid rgba(63, 185, 80, 0.35);
-  color: #3FB950;
+  padding: 7px 15px;
+  background: linear-gradient(135deg, #062f21, #0f5132);
+  border: 1.5px solid rgba(16, 185, 129, 0.45);
+  color: #34d399;
   font-size: 13px;
   font-weight: 600;
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .rs-call-btn:hover {
-  background: rgba(63, 185, 80, 0.22);
-  border-color: #3FB950;
+  background: linear-gradient(135deg, #10b981, #047857);
+  border-color: #10b981;
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.45);
+  transform: translateY(-1px);
 }
 
+.rs-call-btn:active {
+  transform: translateY(1px) scale(0.97);
+}
+
+/* Leave Call state */
 .rs-call-btn--active {
-  background: rgba(248, 81, 73, 0.12);
-  border-color: rgba(248, 81, 73, 0.35);
-  color: #F85149;
+  background: linear-gradient(135deg, #3b1115, #1f1214);
+  border-color: rgba(248, 81, 73, 0.45);
+  color: #f87171;
+  box-shadow: 0 2px 8px rgba(248, 81, 73, 0.1);
 }
 
 .rs-call-btn--active:hover {
-  background: rgba(248, 81, 73, 0.22);
-  border-color: #F85149;
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  border-color: #ef4444;
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(248, 81, 73, 0.45);
+  transform: translateY(-1px);
+}
+
+.rs-call-btn--active:active {
+  transform: translateY(1px) scale(0.97);
 }
 
 /* ════════════════════════════════════
