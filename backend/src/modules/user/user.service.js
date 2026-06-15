@@ -249,7 +249,7 @@ export const deleteUserAccount = async (userId, password) => {
 };
 
 /**
- * GET search users by username (contains, case-insensitive) or email (exact)
+ * GET search users by username (contains, case-insensitive)
  * Excludes the current user. Returns max 10 results.
  */
 export const searchUsers = async (query, currentUserId) => {
@@ -262,19 +262,13 @@ export const searchUsers = async (query, currentUserId) => {
     where: {
       AND: [
         { id: { not: currentUserId } },
-        {
-          OR: [
-            { username: { contains: trimmed, mode: "insensitive" } },
-            { email: { equals: trimmed, mode: "insensitive" } },
-          ],
-        },
+        { username: { contains: trimmed, mode: "insensitive" } },
       ],
     },
     select: {
       id: true,
       username: true,
       fullName: true,
-      email: true,
       avatar: true,
     },
     take: 10,

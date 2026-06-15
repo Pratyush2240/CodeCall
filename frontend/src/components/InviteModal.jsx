@@ -243,7 +243,7 @@ export default function InviteModal({ isOpen, onClose, roomId, participants = []
                   <input
                     type="text"
                     className="invite-search-input"
-                    placeholder="Search by username or email..."
+                    placeholder="Search by username..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     autoFocus
@@ -274,7 +274,7 @@ export default function InviteModal({ isOpen, onClose, roomId, participants = []
                         />
                         <div className="invite-user-info">
                           <p className="invite-user-name">{user.fullName || user.username}</p>
-                          <p className="invite-user-meta">@{user.username} • {user.email}</p>
+                          <p className="invite-user-meta">@{user.username}</p>
                         </div>
 
                         <div className="invite-user-action">
