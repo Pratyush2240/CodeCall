@@ -28,10 +28,15 @@
 
 /* ── Ended rooms ── */
 .room-card--ended {
-  opacity: 0.55;
-  cursor: not-allowed;
+  cursor: default;
   background: #f8f9fb;
   pointer-events: auto;
+}
+
+.room-card--ended .room-icon,
+.room-card--ended .room-info,
+.room-card--ended .avatar-group {
+  opacity: 0.55;
 }
 
 .room-card--ended .room-icon {
@@ -41,6 +46,11 @@
 .room-card--ended .room-more-btn,
 .room-card--ended .room-dropdown-wrap {
   pointer-events: auto;
+}
+
+.room-card--ended .room-more-btn,
+.room-card--ended .room-dropdown-item {
+  cursor: pointer;
 }
 
 /* Icon */
