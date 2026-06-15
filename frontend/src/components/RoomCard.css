@@ -258,63 +258,35 @@
 
 /* ── Inline Rename ── */
 .room-rename-row {
-  position: relative;
   display: flex;
   align-items: center;
-  max-width: 240px;
+  gap: 8px;
   width: 100%;
+  max-width: 300px;
   margin-bottom: 4px;
 }
 
 .room-rename-input {
-  width: 100%;
+  flex: 1;
   height: 32px;
-  padding: 0 24px 0 10px; /* padding right for X button */
-  border: 1.5px solid var(--color-accent);
+  padding: 0 10px;
+  border: 1.5px solid var(--color-border);
   border-radius: 6px;
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text-primary);
-  background: #fff;
+  background: var(--color-bg);
   outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: all 0.15s ease;
 }
 
 .room-rename-input:focus {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
-}
-
-.room-rename-cancel-btn {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: 1px solid var(--color-border);
-  background: #ffffff;
-  color: var(--color-text-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  transition: all 0.15s ease;
-  padding: 0;
-}
-
-.room-rename-cancel-btn:hover {
-  background: #f1f5f9;
-  color: #ef4444;
-  border-color: #ef4444;
   transform: scale(1.05);
 }
 
-.room-rename-cancel-btn svg {
-  width: 10px;
-  height: 10px;
-}
+
 
 /* ── Copied Toast ── */
 .room-copied-toast {

@@ -92,33 +92,30 @@
   border: 1px solid rgba(88, 166, 255, 0.3);
 }
 
-/* End Room — deep slate/crimson destruct button with glowing hover */
+/* End Room — minimalist destruct button */
 .rs-end-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 15px;
-  background: linear-gradient(135deg, #1f1214, #3b1115);
-  border: 1.5px solid rgba(255, 74, 90, 0.45);
-  color: #ff6b7a;
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
   font-size: 13px;
-  font-weight: 600;
-  border-radius: 8px;
+  font-weight: 500;
+  border-radius: 6px;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(255, 74, 90, 0.1);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
 }
 
 .rs-end-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #ff4a5a, #d32f2f);
-  border-color: #ff4a5a;
-  color: #ffffff;
-  box-shadow: 0 4px 16px rgba(255, 74, 90, 0.45);
-  transform: translateY(-1px);
+  background: rgba(239, 68, 68, 0.1);
+  border-color: #ef4444;
+  color: #f87171;
 }
 
 .rs-end-btn:active:not(:disabled) {
-  transform: translateY(1px) scale(0.97);
+  transform: scale(0.97);
 }
 
 .rs-end-btn:disabled {
@@ -126,58 +123,52 @@
   cursor: not-allowed;
 }
 
-/* Invite — high-tech violet/indigo button with glow */
+/* Invite — minimal action button */
 .rs-invite-header-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 15px;
-  background: linear-gradient(135deg, #2a1b4e, #4c2d91);
-  border: 1.5px solid rgba(124, 58, 237, 0.45);
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid rgba(167, 139, 250, 0.3);
   color: #a78bfa;
   font-size: 13px;
-  font-weight: 600;
-  border-radius: 8px;
+  font-weight: 500;
+  border-radius: 6px;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.1);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
 }
 
 .rs-invite-header-btn:hover {
-  background: linear-gradient(135deg, #7c3aed, #5b21b6);
-  border-color: #8b5cf6;
-  color: #ffffff;
-  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.45);
-  transform: translateY(-1px);
+  background: rgba(167, 139, 250, 0.1);
+  border-color: #a78bfa;
+  color: #c4b5fd;
 }
 
 .rs-invite-header-btn:active {
-  transform: translateY(1px) scale(0.97);
+  transform: scale(0.97);
 }
 
-/* Leave Room — sleek glassmorphic navigation exit button */
+/* Leave Room — clean secondary button */
 .rs-leave-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 15px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.3);
   color: #cbd5e1;
   font-size: 13px;
-  font-weight: 600;
-  border-radius: 8px;
+  font-weight: 500;
+  border-radius: 6px;
   cursor: pointer;
-  backdrop-filter: blur(8px);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
 }
 
 .rs-leave-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.25);
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.05);
-  transform: translateY(-1px);
+  background: rgba(148, 163, 184, 0.1);
+  border-color: rgba(148, 163, 184, 0.5);
+  color: #f1f5f9;
 }
 
 .rs-leave-btn:active {
@@ -872,48 +863,42 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 15px;
-  background: linear-gradient(135deg, #062f21, #0f5132);
-  border: 1.5px solid rgba(16, 185, 129, 0.45);
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid rgba(16, 185, 129, 0.3);
   color: #34d399;
   font-size: 13px;
-  font-weight: 600;
-  border-radius: 8px;
+  font-weight: 500;
+  border-radius: 6px;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
 }
 
 .rs-call-btn:hover {
-  background: linear-gradient(135deg, #10b981, #047857);
-  border-color: #10b981;
-  color: #ffffff;
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.45);
-  transform: translateY(-1px);
+  background: rgba(16, 185, 129, 0.1);
+  border-color: #34d399;
+  color: #6ee7b7;
 }
 
 .rs-call-btn:active {
-  transform: translateY(1px) scale(0.97);
+  transform: scale(0.97);
 }
 
 /* Leave Call state */
 .rs-call-btn--active {
-  background: linear-gradient(135deg, #3b1115, #1f1214);
-  border-color: rgba(248, 81, 73, 0.45);
-  color: #f87171;
-  box-shadow: 0 2px 8px rgba(248, 81, 73, 0.1);
+  background: transparent;
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
 }
 
 .rs-call-btn--active:hover {
-  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  background: rgba(239, 68, 68, 0.1);
   border-color: #ef4444;
-  color: #ffffff;
-  box-shadow: 0 4px 16px rgba(248, 81, 73, 0.45);
-  transform: translateY(-1px);
+  color: #f87171;
 }
 
 .rs-call-btn--active:active {
-  transform: translateY(1px) scale(0.97);
+  transform: scale(0.97);
 }
 
 /* ════════════════════════════════════

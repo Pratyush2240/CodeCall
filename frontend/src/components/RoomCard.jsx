@@ -266,12 +266,18 @@ export default function RoomCard({ room, index = 0, isOwner = false, onRename, o
               aria-label="Rename room"
             />
             <button
-              className="room-rename-cancel-btn"
+              className="room-rename-action room-rename-action--cancel"
               onClick={handleCancelRename}
               disabled={renameLoading}
-              aria-label="Cancel rename"
             >
-              <CloseIcon />
+              Cancel
+            </button>
+            <button
+              className="room-rename-action room-rename-action--save"
+              onClick={handleConfirmRename}
+              disabled={renameLoading}
+            >
+              Save
             </button>
           </div>
         ) : (
@@ -315,18 +321,18 @@ export default function RoomCard({ room, index = 0, isOwner = false, onRename, o
                 <CopyIcon />
                 <span>Copy Code</span>
               </button>
-              {isOwner && (
-                <>
-                  <button className="room-dropdown-item" onClick={handleStartRename}>
-                    <EditIcon />
-                    <span>Rename</span>
-                  </button>
-                  <div className="room-dropdown-divider" />
-                  <button className="room-dropdown-item room-dropdown-item--danger" onClick={handleDelete}>
-                    <TrashIcon />
-                    <span>Delete</span>
-                  </button>
-                </>
+              {isOwner && !isEnded && (
+                <button className="room-dropdown-item" onClick={handleStartRename}>
+                  <EditIcon />
+                  <span>Rename</span>
+                </button>
+              )}
+              {(isOwner || isEnded) && <div className="room-dropdown-divider" />}
+              {(isOwner || isEnded) && (
+                <button className="room-dropdown-item room-dropdown-item--danger" onClick={handleDelete}>
+                  <TrashIcon />
+                  <span>Delete</span>
+                </button>
               )}
             </div>
           )}
