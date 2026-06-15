@@ -251,16 +251,15 @@ export default function DashboardPage() {
                 <p className="action-error" role="alert">{createError}</p>
               )}
 
-              <div className="create-room-field">
-                <label className="create-room-label" htmlFor="room-name-input">
-                  Session Name
-                  <span className="create-room-optional">Optional</span>
+              <div className="session-name-field">
+                <label className="session-name-label" htmlFor="room-name-input">
+                  Name:
                 </label>
                 <input
                   id="room-name-input"
                   type="text"
-                  className="join-input"
-                  placeholder="e.g. Sprint Review, DSA Practice…"
+                  className="session-name-input"
+                  placeholder="Write here..."
                   value={roomName}
                   onChange={(e) => setRoomName(e.target.value)}
                   disabled={creating}

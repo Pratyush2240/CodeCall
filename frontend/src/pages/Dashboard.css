@@ -142,30 +142,47 @@
   background: var(--color-accent-hover);
 }
 
-/* Join Input */
-.create-room-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 16px;
+/* Session Name Input */
+.session-name-field {
+  position: relative;
+  margin-top: 18px;
+  margin-bottom: 20px;
 }
 
-.create-room-label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  letter-spacing: 0.01em;
+.session-name-label {
+  position: absolute;
+  top: 0;
+  left: 14px;
+  transform: translateY(-50%);
+  background: var(--color-surface);
+  padding: 0 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #7B88FC;
+  letter-spacing: 0.02em;
+  pointer-events: none;
 }
 
-.create-room-optional {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.session-name-input {
+  width: 100%;
+  height: 48px;
+  padding: 0 16px;
+  border: 1.5px solid #a5b4fc; /* periwinkle border matching image */
+  border-radius: 8px;
+  font-size: 14.5px;
+  color: var(--color-text-primary);
+  background: transparent;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.session-name-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.session-name-input::placeholder {
+  color: #9CA3AF;
 }
 
 .join-input-group {

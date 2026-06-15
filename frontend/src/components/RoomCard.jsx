@@ -266,20 +266,12 @@ export default function RoomCard({ room, index = 0, isOwner = false, onRename, o
               aria-label="Rename room"
             />
             <button
-              className="room-rename-action room-rename-action--confirm"
-              onClick={handleConfirmRename}
-              disabled={renameLoading}
-              aria-label="Confirm rename"
-            >
-              <CheckIcon /> Save
-            </button>
-            <button
-              className="room-rename-action room-rename-action--cancel"
+              className="room-rename-cancel-btn"
               onClick={handleCancelRename}
               disabled={renameLoading}
               aria-label="Cancel rename"
             >
-              Cancel
+              <CloseIcon />
             </button>
           </div>
         ) : (
@@ -287,14 +279,9 @@ export default function RoomCard({ room, index = 0, isOwner = false, onRename, o
         )}
         <div className="room-meta">
           <span className={`room-status room-status--${status}`}>
-            {isEnded ? '⏹ ENDED' : '● ACTIVE'}
+            <span className="room-status-dot"></span>
+            {isEnded ? 'ENDED' : 'ACTIVE'}
           </span>
-          {isEnded && room.autoEnded && (
-            <>
-              <span className="room-meta-divider">·</span>
-              <span className="room-auto-ended-label">Auto Ended</span>
-            </>
-          )}
           <span className="room-meta-divider">·</span>
           <span className="room-code-tag" title="Invite code">📋 {code}</span>
           <span className="room-meta-divider">·</span>
