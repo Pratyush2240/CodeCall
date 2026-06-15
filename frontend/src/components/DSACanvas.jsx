@@ -409,19 +409,30 @@ export default function DSACanvas({ socket, roomId }) {
       {editCell && (
         <div className="dsa-edit-bar">
           <span className="dsa-edit-label">Editing: {editCell.label}</span>
-          <input
-            ref={editInputRef}
-            className="dsa-edit-input"
-            type="text"
-            value={editCell.value}
-            onChange={(e) => setEditCell({ ...editCell, value: e.target.value })}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') commitEdit();
-              if (e.key === 'Escape') setEditCell(null);
-            }}
-          />
-          <button className="dsa-edit-save" onClick={commitEdit}>✓ Save</button>
-          <button className="dsa-edit-cancel" onClick={() => setEditCell(null)}>✕</button>
+          <div className="dsa-edit-input-wrapper">
+            <input
+              ref={editInputRef}
+              className="dsa-edit-input"
+              type="text"
+              value={editCell.value}
+              onChange={(e) => setEditCell({ ...editCell, value: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commitEdit();
+                if (e.key === 'Escape') setEditCell(null);
+              }}
+            />
+            <button
+              className="dsa-edit-cancel-btn"
+              onClick={() => setEditCell(null)}
+              aria-label="Cancel editing"
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
         </div>
       )}
 

@@ -264,7 +264,7 @@
 
 .dsa-edit-input {
   flex: 0 1 200px;
-  padding: 5px 10px;
+  padding: 5px 24px 5px 10px; /* padding right for absolute X button */
   font-size: 14px;
   font-weight: 600;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
@@ -280,37 +280,40 @@
   border-color: #58A6FF;
 }
 
-.dsa-edit-save {
-  padding: 4px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  background: rgba(63, 185, 80, 0.15);
-  color: #3FB950;
-  border: 1px solid rgba(63, 185, 80, 0.3);
-  border-radius: 4px;
+.dsa-edit-input-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.dsa-edit-cancel-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid #30363D;
+  background: #161B22;
+  color: #8B949E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: background 0.12s;
-  font-family: inherit;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: all 0.15s ease;
+  padding: 0;
 }
 
-.dsa-edit-save:hover {
-  background: rgba(63, 185, 80, 0.25);
-}
-
-.dsa-edit-cancel {
-  padding: 4px 8px;
-  font-size: 12px;
-  font-weight: 600;
-  background: rgba(248, 81, 73, 0.1);
+.dsa-edit-cancel-btn:hover {
+  background: #21262D;
   color: #F85149;
-  border: 1px solid rgba(248, 81, 73, 0.25);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.12s;
-  font-family: inherit;
+  border-color: #F85149;
+  transform: scale(1.05);
 }
 
-.dsa-edit-cancel:hover {
-  background: rgba(248, 81, 73, 0.2);
+.dsa-edit-cancel-btn svg {
+  width: 8px;
+  height: 8px;
 }
 
