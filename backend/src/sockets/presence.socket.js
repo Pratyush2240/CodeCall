@@ -11,11 +11,11 @@ const socketToRoom = new Map();
 
 /* ── Internal helpers ───────────────────────────────────────── */
 
-function addUser(roomId, socketId, userId) {
+function addUser(roomId, socketId, userId, username) {
   if (!roomUsers.has(roomId)) {
     roomUsers.set(roomId, new Map());
   }
-  roomUsers.get(roomId).set(socketId, { userId, joinedAt: Date.now() });
+  roomUsers.get(roomId).set(socketId, { userId, username, joinedAt: Date.now() });
   socketToRoom.set(socketId, roomId);
 }
 
@@ -42,10 +42,10 @@ function getRoomUserList(roomId) {
 
   const seen = new Set();
   const users = [];
-  for (const [, { userId, joinedAt }] of room) {
+  for (const [, { userId, username, joinedAt }] of room) {
     if (!seen.has(userId)) {
       seen.add(userId);
-      users.push({ userId, joinedAt });
+      users.push({ userId, username, joinedAt });
     }
   }
   return users;
@@ -58,7 +58,7 @@ function getRoomUserList(roomId) {
  * Broadcasts the updated user list to everyone in the room.
  */
 export function trackJoin(io, socket, roomId) {
-  addUser(roomId, socket.id, socket.user.userId);
+  addUser(roomId, socket.id, socket.user.userId, socket.user.username);
 
   const users = getRoomUserList(roomId);
   io.to(roomId).emit("presence:update", { users, roomId });

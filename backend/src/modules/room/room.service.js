@@ -191,7 +191,17 @@ export async function getRoomById(id, userId) {
     where: { id },
     include: {
       createdBy: { select: { id: true, username: true } },
-      participants: { select: { userId: true } },
+      participants: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              avatar: true,
+            }
+          }
+        }
+      },
     },
   });
 
@@ -221,6 +231,11 @@ export async function getRoomById(id, userId) {
     createdBy: room.createdById,
     createdByName: room.createdBy.username,
     participants: room.participants.map((p) => p.userId),
+    participantDetails: room.participants.map((p) => ({
+      id: p.user.id,
+      username: p.user.username,
+      avatar: p.user.avatar,
+    })),
     projectId: room.projectId,
     lastUpdated: room.updatedAt.toISOString(),
     lastActivity: room.lastActivityAt.toISOString(),

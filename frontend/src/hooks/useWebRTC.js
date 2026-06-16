@@ -50,6 +50,7 @@ export function useWebRTC(socket, roomId, currentUserId) {
         if (e.candidate && socket?.connected) {
           socket.emit("webrtc-ice-candidate", {
             roomId,
+            target: remoteUserId,
             candidate: e.candidate,
           });
         }
@@ -92,23 +93,25 @@ export function useWebRTC(socket, roomId, currentUserId) {
   useEffect(() => {
     if (!socket || !isInCall) return;
 
-    const onOffer = async ({ offer, from }) => {
-      if (from === currentUserId) return;
+    const onOffer = async ({ offer, target, from }) => {
+      if (from === currentUserId || target !== currentUserId) return;
       const pc = createPeer(from);
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      socket.emit("webrtc-answer", { roomId, answer });
+      socket.emit("webrtc-answer", { roomId, target: from, answer });
     };
 
-    const onAnswer = async ({ answer, from }) => {
+    const onAnswer = async ({ answer, target, from }) => {
+      if (target !== currentUserId) return;
       const pc = peerConnections.current[from];
       if (pc && pc.signalingState === "have-local-offer") {
         await pc.setRemoteDescription(new RTCSessionDescription(answer));
       }
     };
 
-    const onIceCandidate = async ({ candidate, from }) => {
+    const onIceCandidate = async ({ candidate, target, from }) => {
+      if (target !== currentUserId) return;
       const pc = peerConnections.current[from];
       if (pc && candidate) {
         try {
@@ -123,42 +126,26 @@ export function useWebRTC(socket, roomId, currentUserId) {
       cleanupPeer(userId);
     };
 
-    // When a new user joins the room, the existing user initiates the offer
-    const onUserJoined = async ({ userId }) => {
+    const onPeerJoined = async ({ userId }) => {
       if (userId === currentUserId || !isInCall) return;
       const pc = createPeer(userId);
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-      socket.emit("webrtc-offer", { roomId, offer });
+      socket.emit("webrtc-offer", { roomId, target: userId, offer });
     };
 
     socket.on("webrtc-offer", onOffer);
     socket.on("webrtc-answer", onAnswer);
     socket.on("webrtc-ice-candidate", onIceCandidate);
     socket.on("webrtc-peer-left", onPeerLeft);
-    socket.on("user-joined", onUserJoined);
-    // Also listen for presence:update to catch joins
-    socket.on("presence:update", ({ users }) => {
-      if (!isInCall) return;
-      users.forEach(({ userId }) => {
-        if (userId !== currentUserId && !peerConnections.current[userId]) {
-          // New peer — send offer
-          (async () => {
-            const pc = createPeer(userId);
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            socket.emit("webrtc-offer", { roomId, offer });
-          })();
-        }
-      });
-    });
+    socket.on("webrtc-peer-joined", onPeerJoined);
 
     return () => {
       socket.off("webrtc-offer", onOffer);
       socket.off("webrtc-answer", onAnswer);
       socket.off("webrtc-ice-candidate", onIceCandidate);
       socket.off("webrtc-peer-left", onPeerLeft);
-      socket.off("user-joined", onUserJoined);
+      socket.off("webrtc-peer-joined", onPeerJoined);
     };
   }, [socket, isInCall, roomId, currentUserId, createPeer, cleanupPeer]);
 
@@ -174,6 +161,9 @@ export function useWebRTC(socket, roomId, currentUserId) {
       setIsInCall(true);
       setIsMicOn(true);
       setIsCamOn(true);
+      if (socket?.connected) {
+        socket.emit("webrtc-join", { roomId });
+      }
     } catch (err) {
       console.error("[webrtc] Failed to get media:", err.message);
       // Try audio-only fallback
@@ -187,11 +177,14 @@ export function useWebRTC(socket, roomId, currentUserId) {
         setIsInCall(true);
         setIsMicOn(true);
         setIsCamOn(false);
+        if (socket?.connected) {
+          socket.emit("webrtc-join", { roomId });
+        }
       } catch (audioErr) {
         console.error("[webrtc] No media available:", audioErr.message);
       }
     }
-  }, []);
+  }, [socket, roomId]);
 
   // ── Leave call — cleanup everything ──────────────────────
   const leaveCall = useCallback(() => {

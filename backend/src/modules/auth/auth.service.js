@@ -54,6 +54,7 @@ export const registerUser = async ({ fullName, username, email, password }) => {
   // Auto-login: generate tokens
   const accessToken = generateAccessToken({
     userId: user.id,
+    username: user.username,
     role: user.role
   });
 
@@ -128,6 +129,7 @@ export const loginUser = async ({ identifier, password }) => {
 
   const accessToken = generateAccessToken({
     userId: user.id,
+    username: user.username,
     role: user.role
   });
 
@@ -214,6 +216,7 @@ export const refreshUserToken = async (refreshToken) => {
 
   const newAccessToken = generateAccessToken({
     userId: user.id,
+    username: user.username,
     role: user.role
   });
 
@@ -354,6 +357,7 @@ export const resetPassword = async (token, newPassword) => {
 export const oauthLogin = async (user) => {
   const accessToken = generateAccessToken({
     userId: user.id,
+    username: user.username,
     role: user.role,
   });
 

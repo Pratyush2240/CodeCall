@@ -199,17 +199,17 @@ const avatarColor   = (str = '') => AVATAR_COLORS[str.charCodeAt(0) % AVATAR_COL
 const initials      = (str = '') => str.slice(0, 2).toUpperCase();
 
 /* ── ParticipantRow ───────────────────────────────────────────── */
-const ParticipantRow = ({ id, isAdmin, isSelf, isTyping }) => (
+const ParticipantRow = ({ id, isAdmin, isSelf, isTyping, username }) => (
   <div className="rs-participant">
     <div className="rs-avatar-wrap">
-      <div className="rs-avatar" style={{ background: avatarColor(id) }}>
-        {initials(id)}
+      <div className="rs-avatar" style={{ background: avatarColor(username || id) }}>
+        {initials(username || id)}
       </div>
       <span className="rs-online-dot" />
     </div>
     <div className="rs-participant-info">
       <span className="rs-participant-name">
-        {isSelf ? 'You' : `User ${id.slice(0, 6)}`}
+        {isSelf ? 'You' : (username || `User ${id.slice(0, 6)}`)}
         {isAdmin && <span className="rs-admin-tag"> (Host)</span>}
       </span>
       {isTyping && (
@@ -269,6 +269,33 @@ export default function RoomSessionPage() {
 
   /* ── Realtime presence ── */
   const { onlineUsers, typingUsers, emitTyping } = usePresence(socket, roomId);
+
+  // Map of userId -> username
+  const [usernamesMap, setUsernamesMap] = useState({});
+
+  // 1. Populate map from participantDetails when room is fetched
+  useEffect(() => {
+    if (room?.participantDetails) {
+      const initialMap = {};
+      room.participantDetails.forEach((p) => {
+        initialMap[p.id] = p.username;
+      });
+      setUsernamesMap((prev) => ({ ...prev, ...initialMap }));
+    }
+  }, [room]);
+
+  // 2. Update map from presence updates
+  useEffect(() => {
+    if (onlineUsers.length > 0) {
+      const presenceMap = {};
+      onlineUsers.forEach((u) => {
+        if (u.username) {
+          presenceMap[u.userId] = u.username;
+        }
+      });
+      setUsernamesMap((prev) => ({ ...prev, ...presenceMap }));
+    }
+  }, [onlineUsers]);
 
   /* ── Collaborative cursor sync ── */
   const [editorInstance, setEditorInstance] = useState(null);
@@ -559,7 +586,7 @@ export default function RoomSessionPage() {
                 key={userId}
                 stream={stream}
                 muted={false}
-                label={`User ${userId.slice(0, 6)}`}
+                label={usernamesMap[userId] || `User ${userId.slice(0, 6)}`}
               />
             ))}
           </div>
@@ -754,6 +781,7 @@ export default function RoomSessionPage() {
                     isAdmin={p === room.createdBy}
                     isSelf={p === currentUserId}
                     isTyping={typingUsers.has(p)}
+                    username={usernamesMap[p]}
                   />
                 ))
               : (
@@ -785,7 +813,7 @@ export default function RoomSessionPage() {
                     >
                       {!isSelf && (
                         <span className="rs-chat-sender">
-                          User {msg.userId.slice(0, 6)}
+                          {usernamesMap[msg.userId] || `User ${msg.userId.slice(0, 6)}`}
                         </span>
                       )}
                       <span className="rs-chat-text">{msg.text}</span>
