@@ -135,7 +135,7 @@ export default function SettingsPage() {
   const handleConnectOAuth = (provider) => {
     const token = localStorage.getItem('accessToken');
     if (!token) return;
-    const BACKEND_URL = 'http://localhost:5000';
+    const BACKEND_URL = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'http://localhost:5000';
     window.location.href = `${BACKEND_URL}/api/auth/${provider}?state=${encodeURIComponent(token)}`;
   };
 
@@ -290,7 +290,7 @@ export default function SettingsPage() {
   const { initials, bg, text } = getAvatarMeta(displayName, user?.id);
 
   /* ── Provider status ── */
-  const githubConnected = user?.provider === 'github' || user?.isOAuthUser;
+  const githubConnected = user?.provider === 'github';
   const googleConnected = user?.provider === 'google';
 
   return (
