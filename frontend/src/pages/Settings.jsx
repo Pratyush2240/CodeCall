@@ -123,8 +123,10 @@ export default function SettingsPage() {
     } else if (error) {
       if (error === 'already_connected') {
         setConnectionError('This social account is already linked to another CodeCall user.');
-      } else {
+      } else if (error === 'oauth_failed') {
         setConnectionError('Failed to connect social account. Please try again.');
+      } else {
+        setConnectionError(decodeURIComponent(error));
       }
       searchParams.delete('error');
       setSearchParams(searchParams, { replace: true });
@@ -290,8 +292,8 @@ export default function SettingsPage() {
   const { initials, bg, text } = getAvatarMeta(displayName, user?.id);
 
   /* ── Provider status ── */
-  const githubConnected = user?.provider === 'github';
-  const googleConnected = user?.provider === 'google';
+  const githubConnected = !!user?.githubId;
+  const googleConnected = !!user?.googleId;
 
   return (
     <div className="settings-shell">

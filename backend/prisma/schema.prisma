@@ -17,8 +17,10 @@ model User {
   fullName    String?
 
   // OAuth provider fields
-  provider    String?           // "github" | "google" | null (local)
-  providerId  String?           // Provider's unique user ID
+  provider    String?           // original signup provider: "github" | "google" | null (local)
+  providerId  String?           // original provider's unique user ID
+  githubId    String?  @unique  // GitHub OAuth ID (set when GitHub is linked)
+  googleId    String?  @unique  // Google OAuth ID (set when Google is linked)
   avatar      String?           // Profile picture URL from OAuth provider
   isOAuthUser Boolean  @default(false)
 

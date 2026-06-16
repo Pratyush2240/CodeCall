@@ -23,6 +23,8 @@ export const getUserProfile = async (userId) => {
       avatar: true,
       isOAuthUser: true,
       provider: true,
+      githubId: true,
+      googleId: true,
       isProfileComplete: true,
       hasPassword: true,
       createdAt: true,
@@ -107,14 +109,11 @@ export const updateUserProfile = async (userId, { fullName, username }) => {
     }
 
     // Check uniqueness — exclude current user
-    const conflict = await prisma.user.findFirst({
-      where: {
-        username: { equals: normUsername, mode: "insensitive" },
-        NOT: { id: userId },
-      },
+    const conflict = await prisma.user.findUnique({
+      where: { username: normUsername },
     });
 
-    if (conflict) {
+    if (conflict && conflict.id !== userId) {
       throw new AppError("This username is already taken.", 400);
     }
   }
@@ -134,6 +133,8 @@ export const updateUserProfile = async (userId, { fullName, username }) => {
       avatar: true,
       isOAuthUser: true,
       provider: true,
+      githubId: true,
+      googleId: true,
       isProfileComplete: true,
       hasPassword: true,
     },

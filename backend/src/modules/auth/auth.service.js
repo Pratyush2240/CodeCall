@@ -22,14 +22,17 @@ const hashToken = (token) =>
  * ================================
  */
 export const registerUser = async ({ fullName, username, email, password }) => {
+  const normEmail = email?.toLowerCase().trim();
+  const normUsername = username?.toLowerCase().trim();
+
   const existingUser = await prisma.user.findFirst({
     where: {
-      OR: [{ email }, { username }]
+      OR: [{ email: normEmail }, { username: normUsername }]
     }
   });
 
   if (existingUser) {
-    if (existingUser.email === email) {
+    if (existingUser.email.toLowerCase() === normEmail) {
       throw new AppError("An account with this email already exists.", 400);
     }
     throw new AppError("This username is already taken.", 400);
@@ -40,8 +43,8 @@ export const registerUser = async ({ fullName, username, email, password }) => {
   const user = await prisma.user.create({
     data: {
       fullName: fullName?.trim() || null,
-      username,
-      email,
+      username: normUsername,
+      email: normEmail,
       password: hashedPassword,
       isProfileComplete: true,
       hasPassword: true
@@ -94,11 +97,12 @@ export const registerUser = async ({ fullName, username, email, password }) => {
 export const loginUser = async ({ identifier, password }) => {
   // Determine whether the identifier is an email or username
   const isEmail = identifier.includes("@");
+  const normIdentifier = identifier.toLowerCase().trim();
 
-  const user = await prisma.user.findFirst({
+  const user = await prisma.user.findUnique({
     where: isEmail
-      ? { email: identifier }
-      : { username: { equals: identifier, mode: "insensitive" } },
+      ? { email: normIdentifier }
+      : { username: normIdentifier },
   });
 
   if (!user) {
@@ -383,13 +387,13 @@ export const checkUsernameAvailability = async (username, excludeUserId = null) 
   if (!/^[a-z0-9_]{3,30}$/.test(norm)) return false;
   if (RESERVED_USERNAMES.has(norm)) return false;
 
-  const conflict = await prisma.user.findFirst({
-    where: {
-      username: { equals: norm, mode: "insensitive" },
-      ...(excludeUserId && { NOT: { id: excludeUserId } }),
-    },
+  const conflict = await prisma.user.findUnique({
+    where: { username: norm },
   });
 
+  if (conflict && excludeUserId && conflict.id === excludeUserId) {
+    return true;
+  }
   return !conflict;
 };
 
@@ -414,13 +418,10 @@ export const completeUserProfile = async (userId, { fullName, username, password
   }
 
   // Check uniqueness (exclude current user)
-  const conflict = await prisma.user.findFirst({
-    where: {
-      username: { equals: normUsername, mode: "insensitive" },
-      NOT: { id: userId },
-    },
+  const conflict = await prisma.user.findUnique({
+    where: { username: normUsername },
   });
-  if (conflict) {
+  if (conflict && conflict.id !== userId) {
     throw new AppError("This username is already taken.", 400);
   }
 

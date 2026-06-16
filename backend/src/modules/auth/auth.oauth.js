@@ -81,53 +81,107 @@ async function resolveOAuthUser(req, provider, providerId, email, displayName, a
       }
     }
 
-    // 1. Look up by provider + providerId (existing OAuth user)
-    const existingOAuth = await prisma.user.findUnique({
-      where: {
-        // Prisma generates this compound unique field name from @@unique([provider, providerId])
-        provider_providerId: { provider, providerId },
-      },
-    });
+    // 1. Look up by provider-specific fields
+    let existingOAuth = null;
+    if (provider === "github") {
+      existingOAuth = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { githubId: providerId },
+            { provider: "github", providerId: providerId }
+          ]
+        }
+      });
+    } else if (provider === "google") {
+      existingOAuth = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { googleId: providerId },
+            { provider: "google", providerId: providerId }
+          ]
+        }
+      });
+    }
 
     if (existingOAuth) {
       if (linkingUserId) {
         if (existingOAuth.id !== linkingUserId) {
           return done(new AppError("This social account is already connected to another user.", 400), null);
         }
-        // Already connected to the same user, just update avatar
+        // Already connected to the same user, just update avatar and ensure githubId/googleId is set
+        const updateData = { avatar };
+        if (provider === "github") {
+          updateData.githubId = providerId;
+        } else if (provider === "google") {
+          updateData.googleId = providerId;
+        }
         const updated = await prisma.user.update({
           where: { id: existingOAuth.id },
-          data: { avatar },
+          data: updateData,
         });
         return done(null, updated);
       }
 
-      // Update avatar in case it changed
+      // Logging in: update avatar and ensure githubId/googleId is set
+      const updateData = { avatar };
+      if (provider === "github" && !existingOAuth.githubId) {
+        updateData.githubId = providerId;
+      } else if (provider === "google" && !existingOAuth.googleId) {
+        updateData.googleId = providerId;
+      }
       const updated = await prisma.user.update({
         where: { id: existingOAuth.id },
-        data: { avatar },
+        data: updateData,
       });
       return done(null, updated);
     }
 
-    // If we are linking a new provider but no existing OAuth record exists for it
+    // If we are linking a new provider but no user exists with this providerId yet
     if (linkingUserId) {
+      const currentUser = await prisma.user.findUnique({
+        where: { id: linkingUserId }
+      });
+      if (!currentUser) {
+        return done(new AppError("User not found.", 404), null);
+      }
+
+      // Verify email matches
+      if (!email) {
+        return done(new AppError("OAuth account does not have a verified email address.", 400), null);
+      }
+      if (email.toLowerCase() !== currentUser.email.toLowerCase()) {
+        return done(new AppError("The email of this social account does not match your CodeCall account email.", 400), null);
+      }
+
+      const updateData = { avatar, isOAuthUser: true };
+      if (provider === "github") {
+        updateData.githubId = providerId;
+      } else if (provider === "google") {
+        updateData.googleId = providerId;
+      }
+
       const linked = await prisma.user.update({
         where: { id: linkingUserId },
-        data: { provider, providerId, avatar, isOAuthUser: true },
+        data: updateData,
       });
       return done(null, linked);
     }
 
-    // 2. If we have an email, try to link to an existing local account
+    // 2. If we have an email, try to link to an existing local/OAuth account
     if (email) {
       const existingByEmail = await prisma.user.findUnique({ where: { email } });
 
       if (existingByEmail) {
+        const updateData = { avatar, isOAuthUser: true };
+        if (provider === "github") {
+          updateData.githubId = providerId;
+        } else if (provider === "google") {
+          updateData.googleId = providerId;
+        }
         // Link the OAuth provider to the existing account
         const linked = await prisma.user.update({
           where: { id: existingByEmail.id },
-          data: { provider, providerId, avatar, isOAuthUser: true },
+          data: updateData,
         });
         return done(null, linked);
       }
@@ -136,17 +190,24 @@ async function resolveOAuthUser(req, provider, providerId, email, displayName, a
     // 3. Create a brand-new OAuth user
     const username = await generateUniqueUsername(displayName);
 
+    const createData = {
+      username,
+      email: email || null,
+      fullName: displayName || null,
+      password: null,          // OAuth users have no password
+      provider,
+      providerId,
+      avatar,
+      isOAuthUser: true,
+    };
+    if (provider === "github") {
+      createData.githubId = providerId;
+    } else if (provider === "google") {
+      createData.googleId = providerId;
+    }
+
     const newUser = await prisma.user.create({
-      data: {
-        username,
-        email: email || null,
-        fullName: displayName || null,
-        password: null,          // OAuth users have no password
-        provider,
-        providerId,
-        avatar,
-        isOAuthUser: true,
-      },
+      data: createData,
     });
 
     return done(null, newUser);

@@ -89,13 +89,24 @@ router.get(
   (req, res, next) => {
     const isLinking = !!req.query.state;
     const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
-    const failureRedirect = isLinking
-      ? `${clientUrl}/settings?error=already_connected`
-      : `${clientUrl}/login?error=oauth_failed`;
-
-    passport.authenticate("github", {
-      session: false,
-      failureRedirect
+    passport.authenticate("github", { session: false }, (err, user, info) => {
+      if (err) {
+        if (isLinking) {
+          const errMsg = err.message || "already_connected";
+          return res.redirect(`${clientUrl}/settings?error=${encodeURIComponent(errMsg)}`);
+        } else {
+          return res.redirect(`${clientUrl}/login?error=oauth_failed`);
+        }
+      }
+      if (!user) {
+        return res.redirect(
+          isLinking
+            ? `${clientUrl}/settings?error=oauth_failed`
+            : `${clientUrl}/login?error=oauth_failed`
+        );
+      }
+      req.user = user;
+      next();
     })(req, res, next);
   },
   githubCallback
@@ -123,13 +134,24 @@ router.get(
   (req, res, next) => {
     const isLinking = !!req.query.state;
     const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
-    const failureRedirect = isLinking
-      ? `${clientUrl}/settings?error=already_connected`
-      : `${clientUrl}/login?error=oauth_failed`;
-
-    passport.authenticate("google", {
-      session: false,
-      failureRedirect
+    passport.authenticate("google", { session: false }, (err, user, info) => {
+      if (err) {
+        if (isLinking) {
+          const errMsg = err.message || "already_connected";
+          return res.redirect(`${clientUrl}/settings?error=${encodeURIComponent(errMsg)}`);
+        } else {
+          return res.redirect(`${clientUrl}/login?error=oauth_failed`);
+        }
+      }
+      if (!user) {
+        return res.redirect(
+          isLinking
+            ? `${clientUrl}/settings?error=oauth_failed`
+            : `${clientUrl}/login?error=oauth_failed`
+        );
+      }
+      req.user = user;
+      next();
     })(req, res, next);
   },
   googleCallback
