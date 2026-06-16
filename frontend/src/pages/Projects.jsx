@@ -4,7 +4,8 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import ProjectCard from '../components/ProjectCard';
 import CreateProjectModal from '../components/CreateProjectModal';
-import { getProjects, createProjectAPI, deleteProjectAPI } from '../api/projects';
+import ConfirmModal from '../components/ConfirmModal';
+import { getProjects, createProjectAPI, deleteProjectAPI, updateProjectAPI } from '../api/projects';
 import './Projects.css';
 
 export default function ProjectsPage() {
@@ -13,6 +14,8 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   /* ── Fetch projects on mount ── */
   const fetchProjects = useCallback(async () => {
@@ -36,10 +39,17 @@ export default function ProjectsPage() {
     setProjects((prev) => [project, ...prev]);
   };
 
-  /* ── Delete project ── */
-  const handleDelete = async (id) => {
-    await deleteProjectAPI(id);
-    setProjects((prev) => prev.filter((p) => p.id !== id));
+  /* ── Rename project ── */
+  const handleRename = async (projectId, newName) => {
+    try {
+      const updated = await updateProjectAPI(projectId, { name: newName });
+      setProjects((prev) =>
+        prev.map((p) => (p.id === projectId ? { ...p, name: updated.name } : p))
+      );
+    } catch (err) {
+      alert(err?.response?.data?.message ?? 'Failed to rename project.');
+      throw err;
+    }
   };
 
   /* ── Navigate to project detail ── */
@@ -108,7 +118,11 @@ export default function ProjectsPage() {
                   key={project.id}
                   project={project}
                   onClick={() => handleOpen(project.id)}
-                  onDelete={() => handleDelete(project.id)}
+                  onRename={handleRename}
+                  onDelete={(id) => {
+                    const proj = projects.find((p) => p.id === id);
+                    setDeleteTarget(proj);
+                  }}
                 />
               ))}
               {/* Add new card */}
@@ -125,6 +139,30 @@ export default function ProjectsPage() {
         onClose={() => setModalOpen(false)}
         onCreate={handleCreate}
       />
+
+      {deleteTarget && (
+        <ConfirmModal
+          title="Delete Project?"
+          message={`Are you sure you want to delete "${deleteTarget.name}"? This action cannot be undone and will permanently delete all rooms and data associated with this project.`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          danger={true}
+          loading={deleting}
+          onConfirm={async () => {
+            setDeleting(true);
+            try {
+              await deleteProjectAPI(deleteTarget.id);
+              setProjects((prev) => prev.filter((p) => p.id !== deleteTarget.id));
+              setDeleteTarget(null);
+            } catch (err) {
+              alert(err?.response?.data?.message ?? 'Failed to delete project.');
+            } finally {
+              setDeleting(false);
+            }
+          }}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
     </div>
   );
 }

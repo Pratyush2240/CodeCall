@@ -146,10 +146,26 @@ export default function RoomCard({ room, index = 0, isOwner = false, onRename, o
   const isEnded = status === 'ENDED';
   const roomId = room.id ?? room._id ?? room.name;
 
+  const getRoomNameParts = () => {
+    if (room.projectId && name.includes(' - ')) {
+      const idx = name.indexOf(' - ');
+      return {
+        prefix: name.substring(0, idx + 3), // "testing 2 - "
+        editable: name.substring(idx + 3),   // "Room 4WI-BTL"
+      };
+    }
+    return {
+      prefix: '',
+      editable: name,
+    };
+  };
+
+  const parts = getRoomNameParts();
+
   /* ── State ── */
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
-  const [renameValue, setRenameValue] = useState(name);
+  const [renameValue, setRenameValue] = useState(parts.editable);
   const [renameLoading, setRenameLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const dropdownRef = useRef(null);
@@ -197,7 +213,8 @@ export default function RoomCard({ room, index = 0, isOwner = false, onRename, o
 
   const handleStartRename = (e) => {
     e.stopPropagation();
-    setRenameValue(name);
+    const currentParts = getRoomNameParts();
+    setRenameValue(currentParts.editable);
     setIsRenaming(true);
     setDropdownOpen(false);
   };
@@ -205,20 +222,27 @@ export default function RoomCard({ room, index = 0, isOwner = false, onRename, o
   const handleCancelRename = (e) => {
     e?.stopPropagation();
     setIsRenaming(false);
-    setRenameValue(name);
+    const currentParts = getRoomNameParts();
+    setRenameValue(currentParts.editable);
   };
 
   const handleConfirmRename = async (e) => {
     e?.stopPropagation();
+    const currentParts = getRoomNameParts();
     const trimmed = renameValue.trim();
-    if (!trimmed || trimmed.length < 2 || trimmed === name) {
+    if (!trimmed || trimmed.length < 2) {
+      handleCancelRename();
+      return;
+    }
+    const fullNewName = currentParts.prefix + trimmed;
+    if (fullNewName === name) {
       handleCancelRename();
       return;
     }
     if (onRename) {
       setRenameLoading(true);
       try {
-        await onRename(roomId, trimmed);
+        await onRename(roomId, fullNewName);
       } catch { /* parent handles errors */ }
       setRenameLoading(false);
     }
@@ -254,17 +278,20 @@ export default function RoomCard({ room, index = 0, isOwner = false, onRename, o
       <div className="room-info">
         {isRenaming ? (
           <div className="room-rename-row" onClick={(e) => e.stopPropagation()}>
-            <input
-              ref={renameInputRef}
-              className="room-rename-input"
-              type="text"
-              value={renameValue}
-              onChange={(e) => setRenameValue(e.target.value)}
-              onKeyDown={handleRenameKeyDown}
-              maxLength={50}
-              disabled={renameLoading}
-              aria-label="Rename room"
-            />
+            <div className="room-rename-container">
+              {parts.prefix && <span className="room-rename-prefix">{parts.prefix}</span>}
+              <input
+                ref={renameInputRef}
+                className="room-rename-input"
+                type="text"
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                onKeyDown={handleRenameKeyDown}
+                maxLength={50 - parts.prefix.length}
+                disabled={renameLoading}
+                aria-label="Rename room"
+              />
+            </div>
             <button
               className="room-rename-close-btn"
               onClick={handleCancelRename}

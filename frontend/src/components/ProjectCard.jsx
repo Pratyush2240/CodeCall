@@ -1,4 +1,30 @@
+import { useState, useRef, useEffect } from 'react';
 import './ProjectCard.css';
+
+/* ── Icons ── */
+const EditIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
 
 /* ── Icons ── */
 const MoreIcon = () => (
@@ -64,7 +90,7 @@ function timeAgo(dateStr) {
   return `${days}d ago`;
 }
 
-export default function ProjectCard({ project, onClick, onDelete, empty = false }) {
+export default function ProjectCard({ project, onClick, onRename, onDelete, empty = false }) {
   if (empty) {
     return (
       <div className="project-card project-card--empty" onClick={onClick} role="button" tabIndex={0}>
@@ -84,11 +110,79 @@ export default function ProjectCard({ project, onClick, onDelete, empty = false 
 
   const { name, description, tags = [], roomCount = 0, memberCount = 0, updatedAt } = project;
 
+  /* ── State ── */
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(name);
+  const [renameLoading, setRenameLoading] = useState(false);
+  const dropdownRef = useRef(null);
+  const renameInputRef = useRef(null);
+
+  /* Close dropdown on outside click */
+  useEffect(() => {
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    if (dropdownOpen) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [dropdownOpen]);
+
+  /* Focus rename input when entering rename mode */
+  useEffect(() => {
+    if (isRenaming && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [isRenaming]);
+
+  /* ── Handlers ── */
   const handleMoreClick = (e) => {
     e.stopPropagation();
-    if (onDelete && window.confirm(`Delete project "${name}"?`)) {
-      onDelete();
+    setDropdownOpen((prev) => !prev);
+  };
+
+  const handleStartRename = (e) => {
+    e.stopPropagation();
+    setRenameValue(name);
+    setIsRenaming(true);
+    setDropdownOpen(false);
+  };
+
+  const handleCancelRename = (e) => {
+    e?.stopPropagation();
+    setIsRenaming(false);
+    setRenameValue(name);
+  };
+
+  const handleConfirmRename = async (e) => {
+    e?.stopPropagation();
+    const trimmed = renameValue.trim();
+    if (!trimmed || trimmed.length < 2 || trimmed === name) {
+      handleCancelRename();
+      return;
     }
+    if (onRename) {
+      setRenameLoading(true);
+      try {
+        await onRename(project.id, trimmed);
+      } catch { /* parent handles errors */ }
+      setRenameLoading(false);
+    }
+    setIsRenaming(false);
+  };
+
+  const handleRenameKeyDown = (e) => {
+    e.stopPropagation();
+    if (e.key === 'Enter') handleConfirmRename(e);
+    if (e.key === 'Escape') handleCancelRename(e);
+  };
+
+  const handleDeleteClick = (e) => {
+    e.stopPropagation();
+    setDropdownOpen(false);
+    if (onDelete) onDelete(project.id);
   };
 
   return (
@@ -108,11 +202,53 @@ export default function ProjectCard({ project, onClick, onDelete, empty = false 
           </div>
         )}
 
-        <div className="project-card-header-row">
-          <h3 className="project-name">{name}</h3>
-          <button className="project-more-btn" onClick={handleMoreClick} aria-label="Project options">
-            <MoreIcon />
-          </button>
+        <div className="project-card-header-row" onClick={(e) => isRenaming && e.stopPropagation()}>
+          {isRenaming ? (
+            <div className="project-rename-row" onClick={(e) => e.stopPropagation()}>
+              <input
+                ref={renameInputRef}
+                className="project-rename-input"
+                type="text"
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                onKeyDown={handleRenameKeyDown}
+                maxLength={50}
+                disabled={renameLoading}
+                aria-label="Rename project"
+              />
+              <button
+                className="project-rename-close-btn"
+                onClick={handleCancelRename}
+                disabled={renameLoading}
+                title="Cancel renaming"
+                aria-label="Cancel renaming"
+              >
+                <CloseIcon />
+              </button>
+            </div>
+          ) : (
+            <>
+              <h3 className="project-name">{name}</h3>
+              <div className="project-dropdown-wrap" ref={dropdownRef}>
+                <button className="project-more-btn" onClick={handleMoreClick} aria-label="Project options">
+                  <MoreIcon />
+                </button>
+                {dropdownOpen && (
+                  <div className="project-dropdown">
+                    <button className="project-dropdown-item" onClick={handleStartRename}>
+                      <EditIcon />
+                      <span>Rename</span>
+                    </button>
+                    <div className="project-dropdown-divider" />
+                    <button className="project-dropdown-item project-dropdown-item--danger" onClick={handleDeleteClick}>
+                      <TrashIcon />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
         {description && <p className="project-description">{description}</p>}
