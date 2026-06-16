@@ -266,18 +266,13 @@ export default function RoomCard({ room, index = 0, isOwner = false, onRename, o
               aria-label="Rename room"
             />
             <button
-              className="room-rename-action room-rename-action--cancel"
+              className="room-rename-close-btn"
               onClick={handleCancelRename}
               disabled={renameLoading}
+              title="Cancel renaming"
+              aria-label="Cancel renaming"
             >
-              Cancel
-            </button>
-            <button
-              className="room-rename-action room-rename-action--save"
-              onClick={handleConfirmRename}
-              disabled={renameLoading}
-            >
-              Save
+              <CloseIcon />
             </button>
           </div>
         ) : (

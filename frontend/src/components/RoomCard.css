@@ -286,6 +286,31 @@
   transform: scale(1.05);
 }
 
+.room-rename-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.room-rename-close-btn:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: #EF4444;
+  transform: scale(1.08);
+}
+
+.room-rename-close-btn:active {
+  background: rgba(239, 68, 68, 0.15);
+  transform: scale(0.95);
+}
+
 
 
 /* ── Copied Toast ── */
