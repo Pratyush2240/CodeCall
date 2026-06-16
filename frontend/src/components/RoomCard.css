@@ -266,46 +266,32 @@
   margin-bottom: 4px;
 }
 
-.room-rename-container {
-  display: flex;
-  align-items: stretch;
-  background: var(--color-bg, #f8fafc);
-  border: 1.5px solid var(--color-border);
-  border-radius: 8px;
-  overflow: hidden;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
-  flex: 1;
-}
-
-.room-rename-container:focus-within {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
-  transform: scale(1.02);
-}
-
-.room-rename-prefix {
-  display: flex;
-  align-items: center;
-  padding: 0 10px;
-  background: var(--color-input-bg, #f1f5f9);
-  border-right: 1.5px solid var(--color-border);
-  font-size: 13px;
+.room-rename-prefix-text {
+  font-size: 13.5px;
   font-weight: 600;
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
   user-select: none;
   white-space: nowrap;
 }
 
 .room-rename-input {
   flex: 1;
-  border: none;
-  background: transparent;
   height: 32px;
   padding: 0 10px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 6px;
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text-primary);
+  background: var(--color-bg);
   outline: none;
+  transition: all 0.15s ease;
+}
+
+.room-rename-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+  transform: scale(1.02);
 }
 
 .room-rename-close-btn {

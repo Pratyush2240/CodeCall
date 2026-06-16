@@ -81,6 +81,7 @@ export async function getProjectById(id, userId) {
       code: r.code,
       status: r.status,
       createdBy: r.createdById,
+      projectId: r.projectId,
       participants: r._count.participants,
       createdAt: r.createdAt.toISOString(),
       lastActivity: r.lastActivityAt.toISOString(),

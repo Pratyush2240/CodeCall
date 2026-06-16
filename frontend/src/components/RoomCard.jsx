@@ -278,20 +278,18 @@ export default function RoomCard({ room, index = 0, isOwner = false, onRename, o
       <div className="room-info">
         {isRenaming ? (
           <div className="room-rename-row" onClick={(e) => e.stopPropagation()}>
-            <div className="room-rename-container">
-              {parts.prefix && <span className="room-rename-prefix">{parts.prefix}</span>}
-              <input
-                ref={renameInputRef}
-                className="room-rename-input"
-                type="text"
-                value={renameValue}
-                onChange={(e) => setRenameValue(e.target.value)}
-                onKeyDown={handleRenameKeyDown}
-                maxLength={50 - parts.prefix.length}
-                disabled={renameLoading}
-                aria-label="Rename room"
-              />
-            </div>
+            {parts.prefix && <span className="room-rename-prefix-text">{parts.prefix}</span>}
+            <input
+              ref={renameInputRef}
+              className="room-rename-input"
+              type="text"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={handleRenameKeyDown}
+              maxLength={50 - parts.prefix.length}
+              disabled={renameLoading}
+              aria-label="Rename room"
+            />
             <button
               className="room-rename-close-btn"
               onClick={handleCancelRename}
