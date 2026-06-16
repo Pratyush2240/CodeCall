@@ -81,14 +81,10 @@ export async function createRoomForUser(userId, projectId = null, name = null) {
   const id = crypto.randomUUID();
   const code = generateCode();
 
-  // Use provided name or generate a default
-  const roomName = name && name.trim()
-    ? name.trim().slice(0, 50)
-    : `Room ${code}`;
+  let roomName = name && name.trim() ? name.trim().slice(0, 50) : null;
 
   const data = {
     id,
-    name: roomName,
     code,
     status: "ACTIVE",
     createdById: userId,
@@ -102,7 +98,17 @@ export async function createRoomForUser(userId, projectId = null, name = null) {
     const project = await prisma.project.findUnique({ where: { id: projectId } });
     if (!project) throw new AppError("Project not found.", 404);
     data.projectId = projectId;
+
+    if (!roomName) {
+      roomName = `${project.name} - Room ${code}`.slice(0, 50);
+    }
   }
+
+  if (!roomName) {
+    roomName = `Room ${code}`;
+  }
+
+  data.name = roomName;
 
   const room = await prisma.room.create({
     data,
@@ -127,7 +133,6 @@ export async function createRoomForUser(userId, projectId = null, name = null) {
     createdAt: room.createdAt.toISOString(),
     autoEnded: false,
   };
-
 }
 
 /**

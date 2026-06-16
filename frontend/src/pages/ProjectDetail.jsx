@@ -2,8 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import RoomCard from '../components/RoomCard';
+import ConfirmModal from '../components/ConfirmModal';
 import { getProject } from '../api/projects';
-import { createRoom } from '../api/rooms';
+import { createRoom, renameRoom, deleteRoom as deleteRoomApi } from '../api/rooms';
 import './ProjectDetail.css';
 
 /* ── Icons ── */
@@ -50,6 +52,17 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [creating, setCreating] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const currentUserId = (() => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return null;
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.userId ?? payload.id ?? payload.sub ?? null;
+    } catch { return null; }
+  })();
 
   const fetchProject = useCallback(async () => {
     try {
@@ -70,12 +83,49 @@ export default function ProjectDetailPage() {
   const handleCreateRoom = async () => {
     setCreating(true);
     try {
-      const room = await createRoom(projectId);
+      const room = await createRoom(null, projectId);
       navigate(`/room/${room.id}`);
     } catch (err) {
       alert(err?.response?.data?.message || 'Failed to create room.');
     } finally {
       setCreating(false);
+    }
+  };
+
+  /* ── Rename Room ── */
+  const handleRename = async (roomId, newName) => {
+    try {
+      await renameRoom(roomId, newName);
+      setProject((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          rooms: prev.rooms.map((r) => (r.id === roomId ? { ...r, name: newName } : r)),
+        };
+      });
+    } catch (err) {
+      alert(err?.response?.data?.message ?? 'Failed to rename room.');
+    }
+  };
+
+  /* ── Delete Room ── */
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteRoomApi(deleteTarget);
+      setProject((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          rooms: prev.rooms.filter((r) => r.id !== deleteTarget),
+        };
+      });
+    } catch (err) {
+      alert(err?.response?.data?.message ?? 'Failed to delete room.');
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -170,27 +220,16 @@ export default function ProjectDetailPage() {
                   </div>
                 )}
 
-                <div className="pd-room-list">
-                  {activeRooms.map((room) => (
-                    <div
+                <div className="pd-room-list" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {activeRooms.map((room, idx) => (
+                    <RoomCard
                       key={room.id}
-                      className="pd-room-card"
-                      onClick={() => navigate(`/room/${room.id}`)}
-                      role="button"
-                      tabIndex={0}
-                    >
-                      <div className="pd-room-icon">
-                        <RoomIcon />
-                      </div>
-                      <div className="pd-room-info">
-                        <span className="pd-room-name">{room.name}</span>
-                        <span className="pd-room-meta">
-                          {room.participantCount} participant{room.participantCount !== 1 ? 's' : ''} · {timeAgo(room.lastActivity)}
-                        </span>
-                      </div>
-                      <div className="pd-room-status pd-room-status--active">Active</div>
-                      <span className="pd-room-code">{room.code}</span>
-                    </div>
+                      room={room}
+                      index={idx}
+                      isOwner={room.createdBy === currentUserId}
+                      onRename={handleRename}
+                      onDelete={(id) => setDeleteTarget(id)}
+                    />
                   ))}
                 </div>
               </section>
@@ -202,26 +241,16 @@ export default function ProjectDetailPage() {
                     Previous Rooms
                     <span className="pd-section-count">{endedRooms.length}</span>
                   </h2>
-                  <div className="pd-room-list">
-                    {endedRooms.map((room) => (
-                      <div
+                  <div className="pd-room-list" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {endedRooms.map((room, idx) => (
+                      <RoomCard
                         key={room.id}
-                        className="pd-room-card pd-room-card--ended"
-                        onClick={() => navigate(`/room/${room.id}`)}
-                        role="button"
-                        tabIndex={0}
-                      >
-                        <div className="pd-room-icon">
-                          <RoomIcon />
-                        </div>
-                        <div className="pd-room-info">
-                          <span className="pd-room-name">{room.name}</span>
-                          <span className="pd-room-meta">
-                            Ended {timeAgo(room.endedAt)}
-                          </span>
-                        </div>
-                        <div className="pd-room-status pd-room-status--ended">Ended</div>
-                      </div>
+                        room={room}
+                        index={idx}
+                        isOwner={room.createdBy === currentUserId}
+                        onRename={handleRename}
+                        onDelete={(id) => setDeleteTarget(id)}
+                      />
                     ))}
                   </div>
                 </section>
@@ -247,6 +276,17 @@ export default function ProjectDetailPage() {
                   ))}
                 </div>
               </section>
+
+              {deleteTarget && (
+                <ConfirmModal
+                  isOpen={!!deleteTarget}
+                  title="Delete Room?"
+                  message="Are you sure you want to permanently delete this room? This will disconnect all active sessions."
+                  confirmLabel={deleting ? 'Deleting…' : 'Delete'}
+                  onConfirm={handleDeleteConfirm}
+                  onCancel={() => setDeleteTarget(null)}
+                />
+              )}
             </>
           )}
         </main>
