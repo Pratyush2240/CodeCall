@@ -174,12 +174,18 @@ export default function CompleteProfilePage() {
     setLoading(true);
     setError('');
     try {
-      await API.post('/auth/complete-profile', {
+      const res = await API.post('/auth/complete-profile', {
         fullName: fullName.trim(),
         username: username.trim(),
         password,
         confirmPassword: confirmPwd,
       });
+      if (res.data?.accessToken) {
+        localStorage.setItem('accessToken', res.data.accessToken);
+      }
+      if (res.data?.refreshToken) {
+        localStorage.setItem('refreshToken', res.data.refreshToken);
+      }
       await refetch();
     } catch (err) {
       setError(err.response?.data?.message ?? 'Something went wrong. Please try again.');

@@ -24,11 +24,25 @@ let ioInstance = null;
 /**
  * Disconnect all sockets in a room and notify them of expiration.
  */
-export const disconnectRoomSockets = (roomId) => {
+export const disconnectRoomSockets = (roomId, reason = "expired") => {
   if (ioInstance) {
-    ioInstance.to(roomId).emit("room-expired");
-    ioInstance.in(roomId).disconnectSockets(true);
-    console.log(`🔌 Disconnected all sockets in room ${roomId} due to expiration`);
+    ioInstance.to(roomId).emit("room-expired", { reason });
+    setTimeout(() => {
+      if (ioInstance) {
+        ioInstance.in(roomId).disconnectSockets(true);
+      }
+    }, 1000);
+    console.log(`🔌 Disconnected all sockets in room ${roomId} due to: ${reason}`);
+  }
+};
+
+/**
+ * Emit an event to all socket connections of a specific user.
+ */
+export const emitToUser = (userId, event, data) => {
+  if (ioInstance) {
+    ioInstance.to(`user:${userId}`).emit(event, data);
+    console.log(`📡 Emitted ${event} to user:${userId}`);
   }
 };
 
@@ -56,7 +70,7 @@ export const initSocket = (server) => {
   ioInstance = io;
 
   // ─── JWT authentication middleware ───────────────────────
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     const token = socket.handshake.auth?.token;
 
     if (!token) {
@@ -67,6 +81,21 @@ export const initSocket = (server) => {
     try {
       const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET);
       socket.user = decoded;
+
+      // Always load the latest username from database to ensure real-time accuracy (e.g. after profile completion)
+      try {
+        const { default: prisma } = await import("../config/prisma.js");
+        const user = await prisma.user.findUnique({
+          where: { id: decoded.userId || decoded.id },
+          select: { username: true },
+        });
+        if (user) {
+          socket.user.username = user.username;
+        }
+      } catch (dbErr) {
+        console.error("[socket] Failed to load user username:", dbErr.message);
+      }
+
       next();
     } catch (err) {
       console.error(`[socket] ❌ JWT verification failed: ${err.message}`);
@@ -77,6 +106,9 @@ export const initSocket = (server) => {
   // ─── Connection handler ─────────────────────────────────
   io.on("connection", (socket) => {
     console.log(`⚡ Socket connected: ${socket.id} (user: ${socket.user.userId})`);
+
+    // Automatically join the user-specific room for real-time notifications
+    socket.join(`user:${socket.user.userId}`);
 
     // ── Join a room ───────────────────────────────────────
     socket.on("join-room", async ({ roomId }) => {

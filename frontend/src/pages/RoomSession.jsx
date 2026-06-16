@@ -258,8 +258,13 @@ export default function RoomSessionPage() {
 
   useEffect(() => {
     if (!socket) return;
-    const handleRoomExpired = () => {
-      setError("This room has expired due to inactivity.");
+    const handleRoomExpired = ({ reason } = {}) => {
+      if (reason === 'ended') {
+        setError("This room has been ended by the host.");
+      } else {
+        setError("This room has expired due to inactivity.");
+      }
+      setCountdown(5);
     };
     socket.on("room-expired", handleRoomExpired);
     return () => {
@@ -571,7 +576,7 @@ export default function RoomSessionPage() {
           isOpen={showInviteModal}
           onClose={() => setShowInviteModal(false)}
           roomId={roomId}
-          participants={participants}
+          participants={displayUsers}
         />
       )}
 

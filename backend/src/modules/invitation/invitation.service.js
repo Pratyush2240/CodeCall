@@ -82,7 +82,7 @@ export async function createInvitation(roomId, senderId, receiverId) {
     // If DECLINED, EXPIRED, or ACCEPTED, we allow re-invitation by upserting/replacing it.
     // Note: if it was ACCEPTED, they aren't currently in the room (checked in step 4), so they could have left.
     // We update it to PENDING and reset timestamps.
-    return await prisma.roomInvitation.update({
+    const updatedInvite = await prisma.roomInvitation.update({
       where: { id: existingInvite.id },
       data: {
         status: "PENDING",
@@ -90,18 +90,70 @@ export async function createInvitation(roomId, senderId, receiverId) {
         createdAt: new Date(),
         expiresAt,
       },
+      include: {
+        room: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            status: true,
+          },
+        },
+        sender: {
+          select: {
+            id: true,
+            username: true,
+            avatar: true,
+          },
+        },
+      },
     });
+
+    try {
+      const { emitToUser } = await import("../../sockets/index.js");
+      emitToUser(receiverId, "invitation-received", updatedInvite);
+    } catch (err) {
+      console.error("Failed to emit invitation-received event:", err);
+    }
+
+    return updatedInvite;
   }
 
   // Create new invitation
-  return await prisma.roomInvitation.create({
+  const newInvite = await prisma.roomInvitation.create({
     data: {
       roomId,
       senderId,
       receiverId,
       expiresAt,
     },
+    include: {
+      room: {
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          status: true,
+        },
+      },
+      sender: {
+        select: {
+          id: true,
+          username: true,
+          avatar: true,
+        },
+      },
+    },
   });
+
+  try {
+    const { emitToUser } = await import("../../sockets/index.js");
+    emitToUser(receiverId, "invitation-received", newInvite);
+  } catch (err) {
+    console.error("Failed to emit invitation-received event:", err);
+  }
+
+  return newInvite;
 }
 
 /**
@@ -243,11 +295,23 @@ export async function revokeInvitation(invitationId, senderId) {
   if (invitation.senderId !== senderId) {
     throw new AppError("Only the invitation sender can revoke it.", 403);
   }
+  if (invitation.status === "ACCEPTED") {
+    throw new AppError("Attendee has already joined", 400);
+  }
 
   // Delete the invitation completely from database
-  return await prisma.roomInvitation.delete({
+  const deleted = await prisma.roomInvitation.delete({
     where: { id: invitationId },
   });
+
+  try {
+    const { emitToUser } = await import("../../sockets/index.js");
+    emitToUser(deleted.receiverId, "invitation-revoked", { id: invitationId });
+  } catch (err) {
+    console.error("Failed to emit invitation-revoked event:", err);
+  }
+
+  return deleted;
 }
 
 /**

@@ -8,6 +8,7 @@ import InvitationCard from '../components/InvitationCard';
 import { useUser } from '../context/UserContext';
 import { createRoom, joinRoom, getRooms, renameRoom, deleteRoom as deleteRoomApi } from '../api/rooms';
 import { getMyInvitations, acceptInvitation, declineInvitation } from '../api/invitations';
+import { createSocket } from '../socket/socket';
 import './Dashboard.css';
 
 
@@ -95,6 +96,34 @@ export default function DashboardPage() {
     })();
 
     return () => { cancelled = true; };
+  }, []);
+
+  /* ── Socket notifications for realtime invitations ── */
+  useEffect(() => {
+    const socket = createSocket();
+    if (!socket) return;
+
+    socket.on("connect", () => {
+      console.log("[dashboard-socket] Realtime socket connected");
+    });
+
+    socket.on("invitation-received", (invite) => {
+      setInvitations((prev) => {
+        if (prev.some((i) => i.id === invite.id)) return prev;
+        return [invite, ...prev];
+      });
+    });
+
+    socket.on("invitation-revoked", ({ id }) => {
+      setInvitations((prev) => prev.filter((i) => i.id !== id));
+    });
+
+    socket.connect();
+
+    return () => {
+      socket.removeAllListeners();
+      socket.disconnect();
+    };
   }, []);
 
   /* ── Accept Invitation ── */

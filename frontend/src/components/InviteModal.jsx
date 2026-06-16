@@ -155,7 +155,10 @@ export default function InviteModal({ isOpen, onClose, roomId, participants = []
       showToast('Invitation revoked.', 'success');
       loadRoomInvitations(activeRoomId);
     } catch (err) {
-      showToast(err?.response?.data?.message || 'Failed to revoke invitation.', 'error');
+      const errMsg = err?.response?.data?.message || 'Failed to revoke invitation.';
+      alert(errMsg);
+      showToast(errMsg, 'error');
+      loadRoomInvitations(activeRoomId);
     }
   };
 

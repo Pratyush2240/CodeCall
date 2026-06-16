@@ -270,7 +270,7 @@ export async function endRoom(id, userId) {
 
   try {
     const { disconnectRoomSockets } = await import("../../sockets/index.js");
-    disconnectRoomSockets(id);
+    disconnectRoomSockets(id, "ended");
   } catch (err) {
     console.error(`Failed to disconnect sockets for manually ended room ${id}:`, err);
   }
@@ -326,6 +326,14 @@ export async function deleteRoom(roomId, userId) {
   if (!room) throw new AppError("Room not found.", 404);
   if (room.createdById !== userId) {
     throw new AppError("Only the room creator can delete this room.", 403);
+  }
+
+  // Disconnect and notify all sockets in that room before deleting
+  try {
+    const { disconnectRoomSockets } = await import("../../sockets/index.js");
+    disconnectRoomSockets(roomId, "ended");
+  } catch (err) {
+    console.error(`Failed to disconnect sockets for deleted room ${roomId}:`, err);
   }
 
   // Transaction: delete participants first, then room
@@ -384,7 +392,7 @@ export async function expireRoom(roomId) {
 
   try {
     const { disconnectRoomSockets } = await import("../../sockets/index.js");
-    disconnectRoomSockets(roomId);
+    disconnectRoomSockets(roomId, "expired");
   } catch (err) {
     console.error(`Failed to disconnect sockets for expired room ${roomId}:`, err);
   }

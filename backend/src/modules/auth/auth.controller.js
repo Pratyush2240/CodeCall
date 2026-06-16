@@ -13,7 +13,10 @@ import {
 import { env } from "../../config/env.js";
 import catchAsync from "../../utils/catchAsync.js";
 import { getUserProfile } from "../user/user.service.js";
-import { verifyAccessToken } from "../../utils/jwt.js";
+import { verifyAccessToken, generateAccessToken, generateRefreshToken } from "../../utils/jwt.js";
+import prisma from "../../config/prisma.js";
+import crypto from "crypto";
+
 
 /**
  * REGISTER — auto-login on success
@@ -187,5 +190,34 @@ export const checkUsername = catchAsync(async (req, res) => {
  */
 export const completeProfile = catchAsync(async (req, res) => {
   const result = await completeUserProfile(req.user.id, req.body);
-  res.status(200).json({ status: "success", data: result });
+
+  // Issue new tokens with the updated username
+  const accessToken = generateAccessToken({
+    userId: result.id,
+    username: result.username,
+    role: result.role,
+  });
+
+  const refreshToken = generateRefreshToken({
+    userId: result.id,
+  });
+
+  const hashedRefresh = crypto.createHash("sha256").update(refreshToken).digest("hex");
+
+  await prisma.refreshToken.create({
+    data: {
+      tokenHash: hashedRefresh,
+      userId: result.id,
+      expiresAt: new Date(
+        Date.now() + Number(process.env.REFRESH_TOKEN_EXPIRY_MS || 30 * 24 * 60 * 60 * 1000)
+      ),
+    },
+  });
+
+  res.status(200).json({
+    status: "success",
+    data: result,
+    accessToken,
+    refreshToken,
+  });
 });
