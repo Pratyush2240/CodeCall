@@ -1,40 +1,41 @@
-# CodeCall System Architecture & Design Document
+# CodeCall — System Architecture & Design Document
 
-CodeCall is a real-time, full-stack collaborative IDE, whiteboard, and communication platform designed for high performance, secure sandboxed execution, and low-latency interaction.
+CodeCall is a real-time collaborative platform with coding, whiteboard, DSA board and communication tools. This document details the system architecture, data model, communication protocols, and security design.
 
 ---
 
 ## 1. System Overview
 
-CodeCall operates on a hybrid architecture combining a standard REST API, persistent bidirectional WebSockets, and direct Peer-to-Peer (P2P) WebRTC communication.
+CodeCall operates on a **hybrid architecture** combining a REST API layer, persistent bidirectional WebSockets, and direct Peer-to-Peer (P2P) WebRTC streaming.
 
 ```mermaid
 graph TD
-    Client[Browser Client]
-    
-    subgraph Frontend [React Frontend]
-        Router[React Router Guard]
-        Hooks[Custom Sync Hooks]
-        API[Axios Interceptor Client]
-        Sockets[Socket.IO Client Singleton]
-        WebRTC[WebRTC Media Engine]
+    Client["Browser Client"]
+
+    subgraph Frontend ["React 19 Frontend (Vite)"]
+        Router["React Router v7<br/>Auth Guards"]
+        Hooks["Custom Sync Hooks<br/>(code, cursor, whiteboard, chat, presence)"]
+        API["Axios HTTP Client<br/>JWT Interceptors"]
+        Sockets["Socket.IO Client<br/>Singleton Instance"]
+        WebRTC["WebRTC Media Engine<br/>P2P Streams"]
     end
 
-    subgraph Backend [Node.js + Express Server]
-        API_Layer[REST Controller Router]
-        Socket_Layer[Socket.IO Server Namespace]
-        Middleware[Auth, Rate Limit & Zod Val]
-        Services[Business Logic & Service Layer]
-        Jobs[BullMQ Queue Manager]
+    subgraph Backend ["Node.js + Express Server"]
+        Middleware["Middleware Pipeline<br/>(Auth, Rate Limit, Zod, CORS, Helmet)"]
+        API_Layer["REST Controller Layer<br/>(auth, user, project, room, invitation, execution, friend, session)"]
+        Socket_Layer["Socket.IO Namespaces<br/>(code, cursor, chat, whiteboard, presence, webrtc, execution)"]
+        Services["Service Layer<br/>Business Logic"]
+        Jobs["BullMQ Queue<br/>Async Workers"]
+        Observability["Observability<br/>(Sentry, Prometheus, Winston)"]
     end
 
-    subgraph Storage [Databases]
-        Postgres[(PostgreSQL Relational DB)]
-        Redis[(Redis Cache & Job Store)]
+    subgraph Storage ["Data Layer"]
+        Postgres[("PostgreSQL<br/>Relational DB")]
+        Redis[("Redis<br/>Cache & Job Store")]
     end
 
-    subgraph Sandbox [Code Execution Sandbox]
-        Judge0[Judge0 Isolated Engine]
+    subgraph Sandbox ["Execution Sandbox"]
+        Judge0["Judge0 CE<br/>Isolated Container"]
     end
 
     Client --> Router
@@ -48,178 +49,395 @@ graph TD
     Middleware --> API_Layer
     API_Layer --> Services
     Services --> Postgres
-    
+
     Sockets --> Socket_Layer
     Socket_Layer --> Services
-    
+
     Services --> Jobs
     Jobs --> Redis
     Services --> Judge0
     Services --> Redis
+
+    Services --> Observability
 ```
 
 ---
 
-## 2. Component Design & Directory Structure
+## 2. Component Architecture
 
-### 2.1 Frontend Architecture (Vite + React)
-The frontend utilizes a modular hook-based architecture to isolate presentation layers (components) from underlying socket connections and state sync channels.
+### 2.1 Frontend Architecture (Vite + React 19)
 
-*   **View Layer (Pages/Components):** React views handle UI renders. Inputs are piped directly into custom state sync hooks.
-*   **Custom Hooks (State Synchronization):**
-    *   [useWebRTC.js](file:///d:/projects/CodeCall/frontend/src/hooks/useWebRTC.js) — Coordinates camera feeds, mic controls, local streams, and WebRTC P2P mesh connection lifecycle.
-    *   `useCodeSync()` — Intercepts Monaco Editor onChange events, debounces changes, and synchronizes workspace cursors/edits.
-    *   `useWhiteboard()` — Handles HTML5 canvas drawing offsets, drawing status, and vector coordinate transmissions.
-*   **Core Services:**
-    *   `api/` — Houses modular Axios configurations. Interceptors attach Bearer JWTs to headers and monitor expiration codes to trigger automatic refresh token handshakes.
-    *   `socket/` — Singleton client instance managing socket connection attempts, auto-reconnect logic, and socket channel events.
+The frontend uses a **modular hook-based architecture** that isolates the presentation layer (components/pages) from real-time state synchronization and network communication.
+
+#### View Layer
+- **Pages** render route-level views (Dashboard, RoomSession, Settings, etc.)
+- **Components** are reusable UI elements (ProjectCard, RoomCard, ConfirmModal, CodeEditor, DSACanvas)
+- All interactive elements use inline rename patterns with Enter-to-confirm/Escape-to-cancel UX
+
+#### Custom Hooks (State Synchronization)
+| Hook | Responsibility |
+|---|---|
+| `useCollaborativeCode` | Intercepts Monaco `onChange` events, debounces changes, and synchronizes edits across participants |
+| `useCursors` | Broadcasts and renders remote cursor positions with per-user color coding |
+| `useWhiteboard` | Handles HTML5 canvas drawing and coordinate transmission |
+| `useDSABoard` | Manages data structure creation, manipulation, and animation state |
+| `useWebRTC` | Coordinates camera/mic streams, P2P mesh connections, and ICE candidate exchange |
+| `useChat` | Manages scoped in-room live chat message state |
+| `usePresence` | Tracks user online/away status and activity indicators |
+| `useCodeExecution` | Submits code to the execution API and receives results |
+| `useSocket` | Manages socket connection lifecycle and auto-reconnection |
+
+#### Core Services
+- **`api/axios.js`** — Axios instance with interceptors that inject `Authorization: Bearer` headers and trigger automatic token refresh on 401 responses
+- **`socket/socket.js`** — Singleton Socket.IO client managing connection lifecycle, auto-reconnect logic, and event channel routing
+- **`context/UserContext.jsx`** — React Context providing global authentication state, user profile data, and login/logout actions
 
 ### 2.2 Backend Architecture (Node.js + Express + Prisma)
-The backend follows a Controller-Service-Repository modular pattern to isolate database querying from routing environments.
 
-*   **Routing & Controller Layer:** Parses request bodies, enforces type checks using Zod middleware, and routes requests to execution services.
-*   **Business Logic (Service Layer):** Contains pure, testable service modules (e.g. `auth.service`, `project.service`, `room.service`) that handle DB writes, notifications, and integration logic.
-*   **Real-time Layer (Sockets):** Socket.IO namespace managers intercept WebRTC signaling requests, coordinate canvas vector operations, and broadcast Monaco edits.
-*   **Background Jobs Layer:** BullMQ runs worker processes asynchronously (utilizing Redis connection limits) to dispatch mailings or run log cleaning operations.
+The backend follows a **Controller → Service → Repository** modular pattern with domain-driven feature modules.
+
+```mermaid
+graph LR
+    subgraph Request Pipeline
+        Req["Incoming Request"] --> Helmet["Helmet Headers"]
+        Helmet --> CORS["CORS Check"]
+        CORS --> BodyParser["Body Parser (10KB limit)"]
+        BodyParser --> Correlation["Correlation ID"]
+        Correlation --> Logger["Request Logger"]
+        Logger --> RateLimit["Rate Limiter"]
+        RateLimit --> Metrics["Metrics Capture"]
+        Metrics --> Auth["JWT Auth"]
+        Auth --> Zod["Zod Validation"]
+        Zod --> Controller["Route Controller"]
+        Controller --> Service["Service Layer"]
+        Service --> Prisma["Prisma ORM"]
+        Prisma --> DB[("PostgreSQL")]
+    end
+```
+
+#### Module Organization
+Each domain module follows the same structure: `controller.js` → `service.js` → `routes.js` (+ optional `validators.js`)
+
+| Module | Endpoints | Description |
+|---|---|---|
+| **auth** | `/api/auth/*` | Login, signup, OAuth callbacks, token refresh, password reset |
+| **user** | `/api/users/*` | Profile retrieval, settings update, avatar management |
+| **project** | `/api/projects/*` | CRUD operations, membership management, tag categorization |
+| **room** | `/api/rooms/*` | Room lifecycle (create, join, rename, end), participant tracking |
+| **invitation** | `/api/invitations/*` | Send, accept, decline room invitations with 24h expiry |
+| **execution** | `/api/execution/*` | Code submission proxy to Judge0 sandbox |
+| **friend** | `/api/friends/*` | Friend request, accept, block system |
+| **session** | `/api/sessions/*` | Legacy 1-on-1 session management |
+| **health** | `/api/health` | Server health check |
+| **metrics** | `/metrics` | Prometheus metrics endpoint |
+
+#### Socket.IO Event Namespaces
+| Handler | Events | Description |
+|---|---|---|
+| `code.socket` | `code-change`, `code-sync` | Collaborative editor content synchronization |
+| `cursor.socket` | `cursor-move`, `cursor-leave` | Remote cursor position broadcasting |
+| `chat.socket` | `chat-message` | Scoped in-room text messaging |
+| `whiteboard.socket` | `draw-start`, `draw-move`, `draw-end`, `clear` | Canvas vector coordinate transmission |
+| `presence.socket` | `user-join`, `user-leave`, `typing` | User presence and activity indicators |
+| `webrtc.socket` | `offer`, `answer`, `ice-candidate` | WebRTC signaling for P2P connections |
+| `execution.socket` | `execution-result` | Code execution result broadcasting |
+
+#### Background Processing
+- **BullMQ** (`queues/job.queue.js`) defines Redis-backed queues for asynchronous tasks
+- **Workers** (`workers/job.workers.js`) process jobs including email dispatch and maintenance operations
 
 ---
 
-## 3. Database Entity Relationship Diagram (ERD)
+## 3. Database Entity Relationship Diagram
 
-Prisma ORM models relational models mapping user accounts, active workspaces, and invites.
+Prisma ORM manages all relational models. The schema includes user accounts, authentication tokens, social features, project workspaces, rooms, and invitations.
 
 ```mermaid
 erDiagram
-    User ||--o{ RefreshToken : issues
-    User ||--o{ Project : owns
-    User ||--o{ ProjectMember : joins
-    User ||--o{ Room : creates
-    User ||--o{ RoomParticipant : attends
-    User ||--o{ RoomInvitation : receives
+    User ||--o{ RefreshToken : "issues"
+    User ||--o{ PasswordResetToken : "requests"
+    User ||--o{ Project : "owns"
+    User ||--o{ ProjectMember : "joins"
+    User ||--o{ Room : "creates"
+    User ||--o{ RoomParticipant : "attends"
+    User ||--o{ RoomInvitation : "sends"
+    User ||--o{ RoomInvitation : "receives"
 
-    Project ||--o{ ProjectMember : has
-    Project ||--o{ Room : contains
+    Project ||--o{ ProjectMember : "has"
+    Project ||--o{ Room : "contains"
 
-    Room ||--o{ RoomParticipant : has
-    Room ||--o{ RoomInvitation : requires
+    Room ||--o{ RoomParticipant : "has"
+    Room ||--o{ RoomInvitation : "requires"
 
     User {
         string id PK
         string email UK
         string username UK
-        string password
-        string role
+        string password "nullable (OAuth users)"
+        string fullName "nullable"
+        string role "USER | ADMIN"
+        string provider "github | google | null"
+        string providerId "OAuth provider ID"
+        string githubId UK "nullable"
+        string googleId UK "nullable"
+        string avatar "nullable"
+        boolean isOAuthUser
         boolean isProfileComplete
         boolean hasPassword
-        dateTime createdAt
+        datetime createdAt
     }
 
     RefreshToken {
         string id PK
         string tokenHash UK
         string userId FK
-        dateTime expiresAt
+        datetime expiresAt
+        datetime createdAt
+    }
+
+    PasswordResetToken {
+        string id PK
+        string token UK
+        string userId FK
+        datetime expiresAt
+        boolean used
+        datetime createdAt
+    }
+
+    Friend {
+        string id PK
+        string requesterId
+        string receiverId
+        string status "PENDING | ACCEPTED | BLOCKED"
+        datetime createdAt
+    }
+
+    Session {
+        string id PK
+        string hostId
+        string guestId "nullable"
+        string status "WAITING | ACTIVE | ENDED"
+        datetime createdAt
+        datetime endedAt "nullable"
     }
 
     Project {
         string id PK
         string name
-        string description
+        string description "nullable"
+        string[] tags
         string ownerId FK
-        dateTime createdAt
-        dateTime updatedAt
+        datetime createdAt
+        datetime updatedAt
     }
 
     ProjectMember {
         string id PK
         string userId FK
         string projectId FK
-        string role
-        dateTime joinedAt
+        string role "OWNER | ADMIN | MEMBER"
+        datetime joinedAt
     }
 
     Room {
         string id PK
         string name
         string code UK
-        string status
+        string status "ACTIVE | ENDED"
         string createdById FK
-        string projectId FK
-        dateTime createdAt
-        dateTime endedAt
+        string projectId FK "nullable"
+        datetime createdAt
+        datetime updatedAt
+        datetime lastActivityAt
+        datetime endedAt "nullable"
     }
 
     RoomParticipant {
         string id PK
         string userId FK
         string roomId FK
-        dateTime joinedAt
+        datetime joinedAt
     }
 
     RoomInvitation {
         string id PK
         string roomId FK
+        string senderId FK
         string receiverId FK
-        string status
-        dateTime createdAt
+        string status "PENDING | ACCEPTED | DECLINED | EXPIRED"
+        datetime createdAt
+        datetime expiresAt "24h TTL"
     }
 ```
 
 ---
 
-## 4. Real-time Communication & Protocols
+## 4. Real-Time Communication Protocols
 
 ### 4.1 Monaco Code Editor Synchronization
-To prevent race conditions during collaborative typing, Monaco editor keystrokes are synchronized across the Socket.IO workspace room.
+
+Collaborative typing is synchronized via Socket.IO room-scoped broadcasts. Change deltas and cursor positions are debounced to reduce network overhead.
 
 ```mermaid
 sequenceDiagram
-    participant User A (Monaco)
-    participant Client A Hook
-    participant Socket.IO Server
-    participant Client B Hook
-    participant User B (Monaco)
+    participant A as User A (Monaco)
+    participant HA as Client A Hook
+    participant S as Socket.IO Server
+    participant HB as Client B Hook
+    participant B as User B (Monaco)
 
-    User A (Monaco)->>Client A Hook: Keystroke Event (change delta)
-    Client A Hook->>Client A Hook: Debounce/Buffer Input
-    Client A Hook->>Socket.IO Server: EMIT "code-change" { delta, cursorPosition }
-    Socket.IO Server->>Client B Hook: BROADCAST "code-change" { delta, cursorPosition }
-    Client B Hook->>User B (Monaco): Apply change delta at cursor index
-    Client B Hook->>User B (Monaco): Update User A's remote cursor placement
+    A->>HA: Keystroke Event (change delta)
+    HA->>HA: Debounce & Buffer Input
+    HA->>S: EMIT "code-change" {delta, cursorPosition}
+    S->>HB: BROADCAST "code-change" {delta, cursorPosition}
+    HB->>B: Apply change delta at cursor index
+    HB->>B: Update User A remote cursor position
 ```
 
-### 4.2 WebRTC Peer-to-Peer Video/Audio Signaling
-WebRTC connections bypass the main servers during streaming. However, standard P2P sessions require a signaling mechanism to negotiate connection terms. CodeCall uses Socket.IO rooms as the signaling channel.
+### 4.2 WebRTC Peer-to-Peer Video/Audio
+
+WebRTC connections bypass the server during active streaming. Socket.IO rooms serve as the **signaling channel** to negotiate connection terms (SDP offers/answers and ICE candidates).
 
 ```mermaid
 sequenceDiagram
-    participant Peer A (Host)
-    participant Socket.IO Signaling Channel
-    participant Peer B (Joiner)
+    participant A as Peer A (Host)
+    participant S as Socket.IO Signaling
+    participant B as Peer B (Joiner)
 
-    Peer B (Joiner)->>Socket.IO Signaling Channel: Join Room Session
-    Socket.IO Signaling Channel-->>Peer A (Host): User Joined Notify
-    Peer A (Host)->>Socket.IO Signaling Channel: EMIT "webrtc-offer" { SDP }
-    Socket.IO Signaling Channel->>Peer B (Joiner): Forward Offer SDP
-    Peer B (Joiner)->>Socket.IO Signaling Channel: EMIT "webrtc-answer" { SDP }
-    Socket.IO Signaling Channel->>Peer A (Host): Forward Answer SDP
-    Note over Peer A, Peer B: ICE Candidate discovery & exchange via Sockets
-    Peer A (Host)-->Peer B (Joiner): P2P WebRTC connection established (Direct Stream)
+    B->>S: Join Room Session
+    S-->>A: User Joined Notification
+    A->>S: EMIT "webrtc-offer" {SDP}
+    S->>B: Forward Offer SDP
+    B->>S: EMIT "webrtc-answer" {SDP}
+    S->>A: Forward Answer SDP
+    Note over A,B: ICE Candidate discovery & exchange via Sockets
+    A-->B: P2P WebRTC Stream Established (Direct)
 ```
+
+### 4.3 DSA Canvas Synchronization
+
+Data structure operations (create, insert, delete, traverse) are broadcast to all room participants. The DSA visualizer supports Arrays, Linked Lists, BSTs, and Graphs with animated step-through.
+
+```mermaid
+sequenceDiagram
+    participant A as User A (Canvas)
+    participant HA as DSA Board Hook
+    participant S as Socket.IO Server
+    participant HB as Client B Hook
+    participant B as User B (Canvas)
+
+    A->>HA: Create BST / Insert Node
+    HA->>S: EMIT "dsa-update" {type, operation, data}
+    S->>HB: BROADCAST "dsa-update" {type, operation, data}
+    HB->>B: Animate operation on canvas
+```
+
+### 4.4 Whiteboard Drawing Sync
+
+Canvas drawing events are transmitted as vector coordinates with optimized point batching for smooth rendering across peers.
 
 ---
 
-## 5. Security & Isolation Architectures
+## 5. Authentication & Authorization Flow
 
-CodeCall is designed with a defense-in-depth approach to ensure database integrity, network safety, and compute environment safety:
+### 5.1 JWT Token Lifecycle
 
-1.  **Code Execution Isolation (Sandboxing):**
-    User code is handled as untrusted data. Instead of executing code locally on the host server, payloads are sent via Axios post calls to **Judge0 CE** sandbox containers. Sandbox policies enforce hard timeouts, memory limit constraints, and disabled network adapters, neutralising malware, fork bombs, and command injection attacks.
-2.  **Stateless JWT Strategy with Rotation:**
-    *   **Access Token:** Short-lived tokens (15m) issued in headers.
-    *   **Refresh Token:** Long-lived tokens (7d) stored securely in the database. When access tokens expire, a verification handshake automatically verifies the refresh token, invalidates the old credentials, rotates the refresh token database entry, and returns a new access/refresh pair, mitigating replay attacks.
-3.  **Input Schema Validation:**
-    All ingress API routes and WebSocket event listeners validate incoming parameters against predefined **Zod schemas**. Non-conforming bodies are rejected before entering business logic functions.
-4.  **CORS & Helmet Header Guard:**
-    *   **Helmet:** Attaches security headers, enforcing frame options, XSS protections, and referer-policies.
-    *   **CORS:** Production middleware checks the request origin and locks API usage exclusively to the client URL configuration.
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant API as Express API
+    participant DB as PostgreSQL
+
+    C->>API: POST /auth/login {email, password}
+    API->>DB: Verify credentials (bcrypt)
+    DB-->>API: User record
+    API->>API: Generate Access Token (15m) + Refresh Token (7d)
+    API->>DB: Store hashed Refresh Token
+    API-->>C: {accessToken, refreshToken}
+
+    Note over C,API: After 15 minutes...
+
+    C->>API: GET /rooms (expired access token)
+    API-->>C: 401 Unauthorized
+
+    C->>API: POST /auth/refresh {refreshToken}
+    API->>DB: Verify & invalidate old Refresh Token
+    API->>API: Generate new Access + Refresh Token pair
+    API->>DB: Store new hashed Refresh Token
+    API-->>C: {newAccessToken, newRefreshToken}
+```
+
+### 5.2 OAuth Flow (Google / GitHub)
+
+1. Client redirects to provider authorization URL
+2. Provider redirects back with authorization code
+3. Backend exchanges code for provider access token
+4. Backend fetches user profile from provider API
+5. If user exists (matched by provider ID or email) → link account & issue JWTs
+6. If new user → create account, mark `isProfileComplete: false` → redirect to profile completion page
+
+---
+
+## 6. Security Architecture
+
+CodeCall implements a **defense-in-depth** strategy across all system layers:
+
+### 6.1 Code Execution Isolation
+User code is treated as **untrusted data**. Instead of local execution, payloads are proxied to **Judge0 CE** sandbox containers that enforce:
+- Hard execution timeouts
+- Memory limit constraints
+- Disabled network adapters
+- Process isolation (neutralizes fork bombs, command injection, and malware)
+
+### 6.2 Network Security
+| Layer | Mechanism | Configuration |
+|---|---|---|
+| **HTTP Headers** | Helmet.js | XSS protection, frame options, referrer policy, HSTS |
+| **CORS** | Express CORS | Origin locked to `CLIENT_URL` in production |
+| **Request Size** | Body Parser | 10KB limit to prevent buffer overflow payloads |
+| **Rate Limiting** | express-rate-limit | Request count caps per IP window |
+| **Speed Limiting** | express-slow-down | Progressive delay on repeated requests |
+| **Input Validation** | Zod schemas | All API inputs validated before entering business logic |
+
+### 6.3 Authentication Security
+| Feature | Implementation |
+|---|---|
+| **Password Hashing** | bcrypt with auto-generated salt rounds |
+| **Access Tokens** | Short-lived JWT (15m), stateless verification |
+| **Refresh Tokens** | Long-lived (7d), hashed in database, single-use with rotation |
+| **Token Rotation** | Old refresh token invalidated on every refresh, preventing replay attacks |
+| **Password Reset** | Time-bound tokens with one-time use enforcement |
+| **OAuth Account Linking** | Provider IDs prevent duplicate accounts (`@@unique([provider, providerId])`) |
+
+### 6.4 Error Handling & Observability
+- **Sentry** captures unhandled exceptions with full stack traces and distributed tracing
+- **Winston** logs structured JSON with correlation IDs for request tracing
+- **Prometheus** exposes HTTP duration histograms and Node.js runtime metrics at `/metrics`
+- **Custom `AppError` class** with centralized error codes ensures consistent API error responses
+
+---
+
+## 7. Middleware Pipeline
+
+Every incoming HTTP request passes through the following middleware chain in order:
+
+```
+Helmet → CORS → Body Parser (10KB) → Correlation ID → Request Logger → Rate Limiter → Speed Limiter → Metrics Capture → JWT Authentication → Zod Validation → Route Controller → Error Handler
+```
+
+Socket.IO connections authenticate via the JWT token passed during the initial handshake, granting access to room-scoped event namespaces.
+
+---
+
+## 8. Deployment Considerations
+
+### Required Services
+- **PostgreSQL** — Primary database (managed or self-hosted)
+- **Redis** — Required for rate limiting, response caching, and BullMQ job queues
+- **Judge0 CE** — Self-hosted or third-party sandbox for code execution
+- **SMTP Server** — For transactional emails (password reset, invitations)
+
+### Optional Integrations
+- **Sentry** — Error monitoring (configure via `SENTRY_DSN`)
+- **Prometheus + Grafana** — Metrics dashboard (scrape `/metrics` endpoint)
+- **GitHub / Google OAuth** — Federated login (configure client ID/secret pairs)
