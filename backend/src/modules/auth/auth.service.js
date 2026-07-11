@@ -69,7 +69,7 @@ export const registerUser = async ({ fullName, username, email, password }) => {
       tokenHash: hashedRefresh,
       userId: user.id,
       expiresAt: new Date(
-        Date.now() + Number(process.env.REFRESH_TOKEN_EXPIRY_MS)
+        Date.now() + (Number(process.env.REFRESH_TOKEN_EXPIRY_MS) || 30 * 24 * 60 * 60 * 1000)
       )
     }
   });
@@ -144,7 +144,7 @@ export const loginUser = async ({ identifier, password }) => {
       tokenHash: hashedToken,
       userId: user.id,
       expiresAt: new Date(
-        Date.now() + Number(process.env.REFRESH_TOKEN_EXPIRY_MS)
+        Date.now() + (Number(process.env.REFRESH_TOKEN_EXPIRY_MS) || 30 * 24 * 60 * 60 * 1000)
       )
     }
   });
@@ -372,7 +372,7 @@ export const oauthLogin = async (user) => {
       tokenHash: hashedToken,
       userId: user.id,
       expiresAt: new Date(
-        Date.now() + Number(process.env.REFRESH_TOKEN_EXPIRY_MS)
+        Date.now() + (Number(process.env.REFRESH_TOKEN_EXPIRY_MS) || 30 * 24 * 60 * 60 * 1000)
       ),
     },
   });
