@@ -1,0 +1,16 @@
+name: Render Backend Ping
+
+on:
+  schedule:
+    # Runs every 2 hours (at minute 0 of every 2nd hour)
+    - cron: '0 */2 * * *'
+  workflow_dispatch: # Allows manual execution from GitHub UI
+
+jobs:
+  ping-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Health Check
+        run: |
+          echo "Pinging backend at $(date)..."
+          curl -s -o /dev/null -w "%{http_code}" https://codecall.onrender.com/health

@@ -31,6 +31,10 @@ import "./config/passport.js"; // registers GitHub & Google strategies
 
 const app = express();
 
+// Trust reverse proxy (Render, Heroku, Nginx, Cloudflare)
+// Required for express-rate-limit to extract client IP from X-Forwarded-For header
+app.set("trust proxy", 1);
+
 // ======================
 // Global Middlewares
 // ======================
@@ -40,18 +44,24 @@ app.use(cors({
     // Allow requests with no origin (mobile apps, curl, Postman)
     if (!origin) return callback(null, true);
 
-    // In production, lock to CLIENT_URL env var
+    // In production, lock to CLIENT_URL env var (supporting multiple origins or trailing slash differences)
     if (process.env.NODE_ENV === "production") {
-      return origin === process.env.CLIENT_URL
-        ? callback(null, true)
-        : callback(new Error("CORS: origin not allowed"));
+      const allowedOrigins = (process.env.CLIENT_URL || "")
+        .split(",")
+        .map((u) => u.trim().replace(/\/$/, ""));
+      const normalizedOrigin = origin.replace(/\/$/, "");
+
+      if (allowedOrigins.includes(normalizedOrigin) || allowedOrigins.includes("*")) {
+        return callback(null, true);
+      }
+      return callback(new AppError("CORS: origin not allowed", 403));
     }
 
     // In development, allow any localhost / 127.0.0.1 port
     const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
     return isLocalhost
       ? callback(null, true)
-      : callback(new Error("CORS: origin not allowed"));
+      : callback(new AppError("CORS: origin not allowed", 403));
   },
   credentials: true, // required for withCredentials / cookie-based auth
 }));
