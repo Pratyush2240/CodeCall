@@ -13,4 +13,4 @@ jobs:
       - name: Ping Render Health Check
         run: |
           echo "Pinging backend at $(date)..."
-          curl -s -o /dev/null -w "%{http_code}" https://codecall.onrender.com/health
+          curl -s -o /dev/null -w "%{http_code}" https://codecall.onrender.com/api/health
